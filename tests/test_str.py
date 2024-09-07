@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 import pytest
+
 from mm_std import number_with_separator, str_ends_with_any, str_starts_with_any, str_to_list
 from mm_std.str import split_on_plus_minus_tokens
 

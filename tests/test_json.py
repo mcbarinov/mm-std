@@ -1,7 +1,8 @@
 from decimal import Decimal
 
-from mm_std import json_dumps
 from pydantic import BaseModel
+
+from mm_std import json_dumps
 
 
 def test_json_dumps():

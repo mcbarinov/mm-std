@@ -2,10 +2,11 @@ import os
 from urllib.parse import urlencode, urlparse
 
 from dotenv import load_dotenv
-from mm_std import FIREFOX_USER_AGENT, check_port, hrequest, json_dumps
-from mm_std.net import add_query_params_to_url, get_free_local_port, hr
 from pytest_httpserver import HTTPServer
 from werkzeug import Request, Response
+
+from mm_std import FIREFOX_USER_AGENT, check_port, hrequest, json_dumps
+from mm_std.net import add_query_params_to_url, get_free_local_port, hr
 
 
 def test_custom_user_agent(httpserver: HTTPServer):

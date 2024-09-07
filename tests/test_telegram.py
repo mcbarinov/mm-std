@@ -1,4 +1,5 @@
 import pytest
+
 from mm_std.telegram import send_telegram_message
 
 pytestmark = pytest.mark.telegram
