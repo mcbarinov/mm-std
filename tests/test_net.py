@@ -33,7 +33,7 @@ def test_firefox_user_agent(httpserver: HTTPServer):
 
 def test_get_params(httpserver: HTTPServer):
     data = {"a": 123, "b": "bla bla"}
-    httpserver.expect_request("/test", query_string=urlencode(data)).respond_with_json(data)
+    httpserver.expect_request("/test", query_string="a=123&b=bla%20bla").respond_with_json(data)
     res = hrequest(httpserver.url_for("test"), params=data)
     assert res.json == data
 
@@ -52,7 +52,7 @@ def test_timeout():
 
 
 def test_proxy_error():
-    res = hrequest("https://httpbin.org/ip", proxy="https://no-real-domain.org:8888")
+    res = hrequest("https://httpbin.org/ip", proxy="https://google.com")
     assert res.error == "proxy_error"
     assert res.is_proxy_error()
 

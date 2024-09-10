@@ -6,8 +6,8 @@ from json import JSONDecodeError
 from typing import Any, TypeVar, cast
 from urllib.parse import urlencode
 
+import httpx
 import pydash
-import requests
 
 from mm_std.result import Err, Ok, Result
 
@@ -93,33 +93,41 @@ def hrequest(
     auth: Any = None,
     verify: bool = True,
 ) -> HResponse:
+    query_params: dict[str, Any] | None = None
+    data: dict[str, Any] | None = None
+    json_: dict[str, Any] | None = None
     method = method.upper()
-    proxies = {"http": proxy, "https": proxy} if proxy else None
     if not headers:
         headers = {}
-    try:
+    if user_agent:
         headers["user-agent"] = user_agent
-        request_params = {
-            "proxies": proxies,
-            "timeout": timeout,
-            "headers": headers,
-            "cookies": cookies,
-            "auth": auth,
-            "verify": verify,
-        }
-        if method == "GET":
-            request_params["params"] = params
-        elif json_params:
-            request_params["json"] = params
-        else:
-            request_params["data"] = params
-        r = requests.request(method, url, **request_params)
+    if method == "GET":
+        query_params = params
+    elif json_params:
+        json_ = params
+    else:
+        data = params
+
+    try:
+        r = httpx.request(
+            method,
+            url,
+            proxy=proxy,
+            timeout=timeout,
+            cookies=cookies,
+            auth=auth,
+            verify=verify,
+            headers=headers,
+            params=query_params,
+            json=json_,
+            data=data,
+        )
         return HResponse(code=r.status_code, body=r.text, headers=dict(r.headers))
-    except requests.exceptions.Timeout:
+    except httpx.TimeoutException:
         return HResponse(error="timeout")
-    except requests.exceptions.ProxyError:
+    except httpx.ProxyError:
         return HResponse(error="proxy_error")
-    except requests.exceptions.ConnectionError as err:
+    except httpx.HTTPError as err:
         return HResponse(error=f"connection_error: {err}")
     except Exception as err:
         return HResponse(error=f"exception: {err}")
