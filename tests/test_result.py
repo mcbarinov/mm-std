@@ -1,4 +1,6 @@
-from mm_std import Err, Ok
+from pydantic import BaseModel
+
+from mm_std import Err, Ok, Result
 
 
 def test_basics() -> None:
@@ -41,12 +43,14 @@ def test_ok_or_none():
     assert Err("bla").ok_or_none() is None
 
 
-# def test_pydandic_with_result():
-#     class A(BaseModel):
-#         name: str
-#         value: Result[int]
-#
-#     a = A(value=Ok(1), name="s1")
-#     print(a)
-#
-#     assert a.value == Ok(1)
+def test_pydandic_with_result():
+    class A(BaseModel):
+        name: str
+        value: Result[int]
+
+    a = A(value=Ok(1, data=[1, 2, 3]), name="s1")
+    assert a.value == Ok(1, data=[1, 2, 3])
+
+    assert a.model_dump() == {"name": "s1", "value": {"data": [1, 2, 3], "ok": 1}}
+
+    assert a == A(**a.model_dump())
