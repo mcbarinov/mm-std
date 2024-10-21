@@ -87,7 +87,7 @@ def hrequest(
     params: dict[str, Any] | None = None,
     headers: dict[str, Any] | None = None,
     cookies: dict[str, Any] | None = None,
-    timeout: int = 10,
+    timeout: float = 10,
     user_agent: str | None = None,
     json_params: bool = True,
     auth: Any = None,
