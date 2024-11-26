@@ -1,13 +1,13 @@
 [project]
 name = "mm-std"
-version = "0.1.6"
+version = "0.1.7"
 description = ""
 requires-python = ">=3.12"
 dependencies = [
     "httpx[socks,http2]~=0.27.2",
-    "pydash~=8.0.0",
+    "pydash~=8.0.4",
     "python-dotenv~=1.0.1",
-    "pydantic~=2.9.2",
+    "pydantic~=2.10.1",
     "PyYAML~=6.0.1",
     "cryptography~=43.0.3",
     "rich~=13.0",
@@ -22,8 +22,7 @@ dev-dependencies = [
     "pytest~=8.3.3",
     "pytest-xdist~=3.6.1",
     "pytest-httpserver~=1.1.0",
-    "coverage~=7.6.4",
-    "ruff~=0.7.0",
+    "ruff~=0.8.0",
     "pip-audit~=2.7.3",
     "bandit~=1.7.10",
     "mypy~=1.13.0",
@@ -31,14 +30,14 @@ dev-dependencies = [
 ]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 warn_no_return = false
 strict = true
 exclude = ["^tests/", "^tmp/"]
 
 [tool.ruff]
 line-length = 130
-target-version = "py312"
+target-version = "py313"
 lint.select = [
     "F", # Pyflakes
     "E", "W", # pycodestyle

@@ -12,7 +12,7 @@ format:
     uv run ruff format src tests
 
 test:
-    uv run coverage run -m pytest -n auto tests
+    uv run pytest -n auto tests
 
 lint: format
     uv run ruff check src tests
