@@ -2,17 +2,12 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable
-from typing import Any, Generic, Literal, NoReturn, TypeAlias, TypeVar
+from typing import Any, Literal, NoReturn
 
 from pydantic_core import core_schema
 
-T = TypeVar("T", covariant=True)  # Success type
-U = TypeVar("U")
-F = TypeVar("F")
-TBE = TypeVar("TBE", bound=BaseException)
 
-
-class Ok(Generic[T]):
+class Ok[T]:
     __match_args__ = ("ok",)
 
     def __init__(self, ok: T, data: Any = None) -> None:
@@ -56,7 +51,7 @@ class Ok(Generic[T]):
     def unwrap_err(self) -> NoReturn:
         raise UnwrapError(self, "Called `Result.unwrap_err()` on an `Ok` value")
 
-    def unwrap_or(self, _default: U) -> T:
+    def unwrap_or[U](self, _default: U) -> T:
         return self.ok
 
     def unwrap_or_else(self, op: object) -> T:
@@ -65,13 +60,13 @@ class Ok(Generic[T]):
     def unwrap_or_raise(self, e: object) -> T:
         return self.ok
 
-    def map(self, op: Callable[[T], U]) -> Ok[U]:
+    def map[U](self, op: Callable[[T], U]) -> Ok[U]:
         return Ok(op(self.ok), data=self.data)
 
-    def map_or(self, default: object, op: Callable[[T], U]) -> U:
+    def map_or[U](self, default: object, op: Callable[[T], U]) -> U:
         return op(self.ok)
 
-    def map_or_else(self, err_op: object, ok_op: Callable[[T], U]) -> U:
+    def map_or_else[U](self, err_op: object, ok_op: Callable[[T], U]) -> U:
         """
         The contained result is `Ok`, so return original value mapped to
         a new value using the passed in `op` function.
@@ -84,7 +79,7 @@ class Ok(Generic[T]):
         """
         return self
 
-    def and_then(self, op: Callable[[T], U | Result[U]]) -> Result[U]:
+    def and_then[U](self, op: Callable[[T], U | Result[U]]) -> Result[U]:
         """
         The contained result is `Ok`, so return the result of `op` with the
         original value passed in. If return of `op` function is not Result, it will be a Ok value.
@@ -115,7 +110,7 @@ class Ok(Generic[T]):
                 {
                     "ok": core_schema.model_field(core_schema.any_schema()),
                     "data": core_schema.model_field(core_schema.any_schema()),
-                }
+                },
             ),
         )
 
@@ -159,10 +154,7 @@ class Err:
         """
         Raises an `UnwrapError`.
         """
-        exc = UnwrapError(
-            self,
-            f"{message}: {self.err!r}",
-        )
+        exc = UnwrapError(self, f"{message}: {self.err!r}")
         if isinstance(self.err, BaseException):
             raise exc from self.err
         raise exc
@@ -177,10 +169,7 @@ class Err:
         """
         Raises an `UnwrapError`.
         """
-        exc = UnwrapError(
-            self,
-            f"Called `Result.unwrap()` on an `Err` value: {self.err!r}",
-        )
+        exc = UnwrapError(self, f"Called `Result.unwrap()` on an `Err` value: {self.err!r}")
         if isinstance(self.err, BaseException):
             raise exc from self.err
         raise exc
@@ -191,20 +180,20 @@ class Err:
         """
         return self.err
 
-    def unwrap_or(self, default: U) -> U:
+    def unwrap_or[U](self, default: U) -> U:
         """
         Return `default`.
         """
         return default
 
-    def unwrap_or_else(self, op: Callable[[str], T]) -> T:
+    def unwrap_or_else[T](self, op: Callable[[str], T]) -> T:
         """
         The contained result is ``Err``, so return the result of applying
         ``op`` to the error value.
         """
         return op(self.err)
 
-    def unwrap_or_raise(self, e: type[TBE]) -> NoReturn:
+    def unwrap_or_raise[TBE: BaseException](self, e: type[TBE]) -> NoReturn:
         """
         The contained result is ``Err``, so raise the exception with the value.
         """
@@ -216,13 +205,13 @@ class Err:
         """
         return self
 
-    def map_or(self, default: U, op: object) -> U:
+    def map_or[U](self, default: U, op: object) -> U:
         """
         Return the default value
         """
         return default
 
-    def map_or_else(self, err_op: Callable[[str], U], ok_op: object) -> U:
+    def map_or_else[U](self, err_op: Callable[[str], U], ok_op: object) -> U:
         """
         Return the result of the default operation
         """
@@ -234,10 +223,10 @@ class Err:
         """
         return self
 
-    def ok_or_err(self) -> T | str:
+    def ok_or_err[T](self) -> T | str:
         return self.err
 
-    def ok_or_none(self) -> T | None:
+    def ok_or_none[T](self) -> T | None:
         return None
 
     @classmethod
@@ -248,18 +237,18 @@ class Err:
                 {
                     "err": core_schema.model_field(core_schema.any_schema()),
                     "data": core_schema.model_field(core_schema.any_schema()),
-                }
+                },
             ),
         )
 
 
-Result: TypeAlias = Ok[T] | Err
+type Result[T] = Ok[T] | Err
 
 
 class UnwrapError(Exception):
-    _result: Result[object]
+    _result: Result[Any]
 
-    def __init__(self, result: Result[object], message: str) -> None:
+    def __init__(self, result: Result[Any], message: str) -> None:
         self._result = result
         super().__init__(message)
 
@@ -268,7 +257,7 @@ class UnwrapError(Exception):
         return self._result
 
 
-def try_ok(fn: Callable[..., Result[T]], *, args: tuple[object], attempts: int, delay: int | float = 0) -> Result[T]:
+def try_ok[T](fn: Callable[..., Result[T]], *, args: tuple[object], attempts: int, delay: int | float = 0) -> Result[T]:
     if attempts <= 0:
         raise ValueError("attempts must be more than zero")
     res: Result[T] = Err("not started")

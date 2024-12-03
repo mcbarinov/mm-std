@@ -8,13 +8,13 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from logging import Logger
 from threading import Lock, Thread
-from typing import ParamSpec, TypeAlias, TypeVar
+from typing import ParamSpec, TypeVar
 
 from .date import is_too_old, utc_now
 
-Func: TypeAlias = Callable[..., object]
-Args: TypeAlias = tuple[object, ...]
-Kwargs: TypeAlias = dict[str, object]
+type Func = Callable[..., object]
+type Args = tuple[object, ...]
+type Kwargs = dict[str, object]
 
 
 class ConcurrentTasks:

@@ -1,6 +1,5 @@
 import io
 from pathlib import Path
-from typing import TypeVar
 
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
@@ -8,8 +7,6 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from .print_ import PrintFormat, print_console, print_json, print_plain, print_table
 from .str import str_to_list
 from .zip import read_text_from_zip_archive
-
-T = TypeVar("T")
 
 
 class BaseConfig(BaseModel):
@@ -32,7 +29,7 @@ class BaseConfig(BaseModel):
         return v
 
     @classmethod
-    def read_config(  # nosec
+    def read_config[T](  # nosec: B107
         cls: type[T],
         config_path: io.TextIOWrapper | str | Path,
         error_print_type: PrintFormat = PrintFormat.PLAIN,

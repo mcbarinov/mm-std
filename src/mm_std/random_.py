@@ -1,12 +1,9 @@
 import random
 from collections.abc import Sequence
 from decimal import Decimal
-from typing import TypeVar
-
-T = TypeVar("T", contravariant=True)
 
 
-def random_choice(source: Sequence[T] | T | None) -> T | None:
+def random_choice[T](source: Sequence[T] | T | None) -> T | None:
     """Deprecated, don't use it"""
     if source is None:
         return None

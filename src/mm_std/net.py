@@ -3,7 +3,7 @@ import socket
 import time
 from dataclasses import asdict, dataclass, field
 from json import JSONDecodeError
-from typing import Any, TypeVar, cast
+from typing import Any, cast
 from urllib.parse import urlencode
 
 import httpx
@@ -14,8 +14,6 @@ from mm_std.result import Err, Ok, Result
 FIREFOX_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:108.0) Gecko/20100101 Firefox/108.0"
 SAFARI_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Safari/605.1.15"  # fmt: skip # noqa
 CHROME_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"  # fmt: skip # noqa
-
-T = TypeVar("T")
 
 
 @dataclass
@@ -57,10 +55,10 @@ class HResponse:
                 return self.headers[key]
         return None
 
-    def to_err_result(self, error: str | None = None) -> Err:
+    def to_err_result[T](self, error: str | None = None) -> Err:
         return Err(error or self.error or "error", data=asdict(self))
 
-    def to_ok_result(self, result: T) -> Result[T]:
+    def to_ok_result[T](self, result: T) -> Result[T]:
         return Ok(result, data=asdict(self))
 
     def is_error(self) -> bool:

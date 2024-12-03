@@ -33,15 +33,15 @@ def test_firefox_user_agent(httpserver: HTTPServer):
 
 def test_get_params(httpserver: HTTPServer):
     data = {"a": 123, "b": "bla bla"}
-    httpserver.expect_request("/test", query_string="a=123&b=bla%20bla").respond_with_json(data)
-    res = hrequest(httpserver.url_for("test"), params=data)
+    httpserver.expect_request("/test", query_string="a=123&b=bla+bla").respond_with_json(data)
+    res = hrequest(httpserver.url_for("/test"), params=data)
     assert res.json == data
 
 
 def test_post_method(httpserver: HTTPServer):
     data = {"a": 1}
     httpserver.expect_request("/test", query_string=urlencode(data)).respond_with_json(data)
-    res = hrequest(httpserver.url_for("test"), params=data)
+    res = hrequest(httpserver.url_for("/test"), params=data)
     assert res.json == data
 
 
