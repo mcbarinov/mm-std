@@ -52,10 +52,6 @@ def parse_date(value: str, ignore_tz: bool = False) -> datetime:
     raise ValueError(f"Time data '{value}' does not match any known format.")
 
 
-# def parse_date(value: str, ignore_tz: bool = False) -> datetime:
-#     return parser.parse(value, ignoretz=ignore_tz)
-
-
 def utc_random(
     *,
     from_time: datetime | None = None,

@@ -8,7 +8,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from logging import Logger
 from threading import Lock, Thread
-from typing import ParamSpec, TypeVar
 
 from .date import is_too_old, utc_now
 
@@ -57,11 +56,7 @@ class ConcurrentTasks:
                 self.timeout_error = True
 
 
-T = TypeVar("T")
-P = ParamSpec("P")
-
-
-def synchronized_parameter(arg_index: int = 0, skip_if_locked: bool = False) -> Callable[..., Callable[P, T | None]]:
+def synchronized_parameter[T, **P](arg_index: int = 0, skip_if_locked: bool = False) -> Callable[..., Callable[P, T | None]]:
     locks: dict[object, Lock] = defaultdict(Lock)
 
     def outer(func: Callable[P, T]) -> Callable[P, T | None]:
@@ -81,7 +76,7 @@ def synchronized_parameter(arg_index: int = 0, skip_if_locked: bool = False) -> 
     return outer
 
 
-def synchronized(fn: Callable[P, T]) -> Callable[P, T]:
+def synchronized[T, **P](fn: Callable[P, T]) -> Callable[P, T]:
     lock = Lock()
 
     @functools.wraps(fn)
