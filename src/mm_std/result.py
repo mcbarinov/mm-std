@@ -1,29 +1,30 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
-from typing import Any, Literal, NoReturn
+from typing import TYPE_CHECKING, Any, Literal, NoReturn
 
 from pydantic_core import core_schema
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class Ok[T]:
     __match_args__ = ("ok",)
 
-    def __init__(self, ok: T, data: Any = None) -> None:
+    def __init__(self, ok: T, data: object = None) -> None:
         self.ok = ok
         self.data = data
 
     def __repr__(self) -> str:
         if self.data is None:
             return f"Ok({self.ok!r})"
-        else:
-            return f"Ok({self.ok!r}, data={self.data!r})"
+        return f"Ok({self.ok!r}, data={self.data!r})"
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         return isinstance(other, Ok) and self.ok == other.ok and self.data == other.data
 
-    def __ne__(self, other: Any) -> bool:
+    def __ne__(self, other: object) -> bool:
         return not (self == other)
 
     def __hash__(self) -> int:
@@ -54,26 +55,26 @@ class Ok[T]:
     def unwrap_or[U](self, _default: U) -> T:
         return self.ok
 
-    def unwrap_or_else(self, op: object) -> T:
+    def unwrap_or_else(self, _op: object) -> T:
         return self.ok
 
-    def unwrap_or_raise(self, e: object) -> T:
+    def unwrap_or_raise(self, _e: object) -> T:
         return self.ok
 
     def map[U](self, op: Callable[[T], U]) -> Ok[U]:
         return Ok(op(self.ok), data=self.data)
 
-    def map_or[U](self, default: object, op: Callable[[T], U]) -> U:
+    def map_or[U](self, _default: object, op: Callable[[T], U]) -> U:
         return op(self.ok)
 
-    def map_or_else[U](self, err_op: object, ok_op: Callable[[T], U]) -> U:
+    def map_or_else[U](self, _err_op: object, ok_op: Callable[[T], U]) -> U:
         """
         The contained result is `Ok`, so return original value mapped to
         a new value using the passed in `op` function.
         """
         return ok_op(self.ok)
 
-    def map_err(self, op: object) -> Ok[T]:
+    def map_err(self, _op: object) -> Ok[T]:
         """
         The contained result is `Ok`, so return `Ok` with the original value
         """
@@ -93,7 +94,7 @@ class Ok[T]:
         res.data = self.data
         return res
 
-    def or_else(self, op: object) -> Ok[T]:
+    def or_else(self, _op: object) -> Ok[T]:
         return self
 
     def ok_or_err(self) -> T | str:
@@ -103,7 +104,7 @@ class Ok[T]:
         return self.ok
 
     @classmethod
-    def __get_pydantic_core_schema__(cls, _source_type: Any, _handler: Any) -> core_schema.CoreSchema:
+    def __get_pydantic_core_schema__(cls, _source_type: object, _handler: object) -> core_schema.CoreSchema:
         return core_schema.model_schema(
             cls,
             core_schema.model_fields_schema(
@@ -118,20 +119,19 @@ class Ok[T]:
 class Err:
     __match_args__ = ("err",)
 
-    def __init__(self, err: str | Exception, data: Any = None) -> None:
+    def __init__(self, err: str | Exception, data: object = None) -> None:
         self.err = f"exception: {err}" if isinstance(err, Exception) else err
         self.data = data
 
     def __repr__(self) -> str:
         if self.data is None:
             return f"Err({self.err!r})"
-        else:
-            return f"Err({self.err!r}, data={self.data!r})"
+        return f"Err({self.err!r}, data={self.data!r})"
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         return isinstance(other, Err) and self.err == other.err and self.data == other.data
 
-    def __ne__(self, other: Any) -> bool:
+    def __ne__(self, other: object) -> bool:
         return not (self == other)
 
     def __hash__(self) -> int:
@@ -199,25 +199,25 @@ class Err:
         """
         raise e(self.err)
 
-    def map(self, op: object) -> Err:
+    def map(self, _op: object) -> Err:
         """
         Return `Err` with the same value
         """
         return self
 
-    def map_or[U](self, default: U, op: object) -> U:
+    def map_or[U](self, default: U, _op: object) -> U:
         """
         Return the default value
         """
         return default
 
-    def map_or_else[U](self, err_op: Callable[[str], U], ok_op: object) -> U:
+    def map_or_else[U](self, err_op: Callable[[str], U], _ok_op: object) -> U:
         """
         Return the result of the default operation
         """
         return err_op(self.err)
 
-    def and_then(self, op: object) -> Err:
+    def and_then(self, _op: object) -> Err:
         """
         The contained result is `Err`, so return `Err` with the original value
         """
@@ -230,7 +230,7 @@ class Err:
         return None
 
     @classmethod
-    def __get_pydantic_core_schema__(cls, _source_type: Any, _handler: Any) -> core_schema.CoreSchema:
+    def __get_pydantic_core_schema__(cls, _source_type: object, _handler: object) -> core_schema.CoreSchema:
         return core_schema.model_schema(
             cls,
             core_schema.model_fields_schema(
@@ -257,7 +257,7 @@ class UnwrapError(Exception):
         return self._result
 
 
-def try_ok[T](fn: Callable[..., Result[T]], *, args: tuple[object], attempts: int, delay: int | float = 0) -> Result[T]:
+def try_ok[T](fn: Callable[..., Result[T]], *, args: tuple[object], attempts: int, delay: float = 0) -> Result[T]:
     if attempts <= 0:
         raise ValueError("attempts must be more than zero")
     res: Result[T] = Err("not started")

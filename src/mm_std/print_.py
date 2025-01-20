@@ -26,11 +26,10 @@ def print_console(*messages: object, print_json: bool = False) -> None:
         message = messages[0]
         if isinstance(message, str):
             print(message)  # noqa: T201
+        elif print_json:
+            rich.print_json(json_dumps(message))
         else:
-            if print_json:
-                rich.print_json(json_dumps(message))
-            else:
-                rich.print(message)
+            rich.print(message)
     else:
         rich.print(messages)
 

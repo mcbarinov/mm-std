@@ -25,7 +25,7 @@ def testand_then():
 
 
 def test_and_then_with_exception():
-    assert Ok(1, data=[1, 2, 3]).and_then(lambda o: 2 / 0) == Err("exception: division by zero", data=[1, 2, 3])
+    assert Ok(1, data=[1, 2, 3]).and_then(lambda _: 2 / 0) == Err("exception: division by zero", data=[1, 2, 3])
 
 
 def test_ok_or_err():

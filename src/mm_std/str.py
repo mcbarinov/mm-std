@@ -62,18 +62,12 @@ def number_with_separator(
 
 def str_starts_with_any(value: str, prefixes: list[str]) -> bool:
     """check if str starts with any of prefixes"""
-    for prefix in prefixes:
-        if value.startswith(prefix):
-            return True
-    return False
+    return any(value.startswith(prefix) for prefix in prefixes)
 
 
 def str_ends_with_any(value: str, prefixes: list[str]) -> bool:
     """check if str ends with any of prefixes"""
-    for prefix in prefixes:
-        if value.endswith(prefix):
-            return True
-    return False
+    return any(value.endswith(prefix) for prefix in prefixes)
 
 
 def split_on_plus_minus_tokens(value: str) -> list[str]:

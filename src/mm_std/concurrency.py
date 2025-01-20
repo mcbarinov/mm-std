@@ -88,7 +88,7 @@ def synchronized[T, **P](fn: Callable[P, T]) -> Callable[P, T]:
 
 
 class Scheduler:
-    def __init__(self, log: Logger, loop_delay: float = 0.5, debug: bool = False):
+    def __init__(self, log: Logger, loop_delay: float = 0.5, debug: bool = False) -> None:
         self.log = log
         self.debug = debug
         self.loop_delay = loop_delay
@@ -121,8 +121,8 @@ class Scheduler:
         try:
             job.func(*job.args)
             self._debug(f"_run_job: {job} done")
-        except Exception as e:
-            self.log.exception("scheduler error: %s", str(e))
+        except Exception:
+            self.log.exception("scheduler error")
             self._debug(f"_run_job: {job} error")
         finally:
             job.is_running = False

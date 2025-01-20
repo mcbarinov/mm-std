@@ -19,7 +19,7 @@ def run_command(cmd: str, timeout: int | None = 60, capture_output: bool = True,
     if echo_cmd_console:
         print(cmd)  # noqa: T201
     try:
-        process = subprocess.run(cmd, timeout=timeout, capture_output=capture_output, shell=True, check=False)  # nosec
+        process = subprocess.run(cmd, timeout=timeout, capture_output=capture_output, shell=True, check=False)  # noqa: S602 # nosec
         stdout = process.stdout.decode("utf-8") if capture_output else ""
         stderr = process.stderr.decode("utf-8") if capture_output else ""
         return CommandResult(stdout=stdout, stderr=stderr, code=process.returncode)

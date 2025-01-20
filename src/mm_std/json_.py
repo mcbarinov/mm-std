@@ -4,7 +4,6 @@ from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 from json import JSONEncoder
-from typing import Any
 
 from pydantic import BaseModel
 
@@ -12,7 +11,7 @@ from mm_std.result import Err, Ok
 
 
 class CustomJSONEncoder(JSONEncoder):
-    def default(self, o: Any) -> Any:
+    def default(self, o: object) -> object:
         if isinstance(o, Ok):
             return {"ok": o.ok}
         if isinstance(o, Err):

@@ -43,10 +43,10 @@ def parse_date(value: str, ignore_tz: bool = False) -> datetime:
 
     for fmt in date_formats:
         try:
-            dt = datetime.strptime(value, fmt)
+            dt = datetime.strptime(value, fmt)  # noqa: DTZ007
             if ignore_tz and dt.tzinfo is not None:
                 dt = dt.replace(tzinfo=None)
-            return dt
+            return dt  # noqa: TRY300
         except ValueError:
             continue
     raise ValueError(f"Time data '{value}' does not match any known format.")

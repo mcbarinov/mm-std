@@ -1,6 +1,6 @@
 import logging
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 
 from mm_std import ConcurrentTasks
 from mm_std.concurrency import Scheduler, synchronized, synchronized_parameter
@@ -22,7 +22,7 @@ def task3(*, p1: str, p2: str) -> str:
 
 
 def task4():
-    raise Exception("moo")
+    raise RuntimeError("moo")
 
 
 def task5(seconds: int):
@@ -80,7 +80,7 @@ def test_synchronized():
         time.sleep(1)
         raise RuntimeError
 
-    start_time = datetime.now()
+    start_time = datetime.now(tz=UTC)
     tasks = ConcurrentTasks()
     tasks.add_task("task1-1", _task1, args=(1, False))
     tasks.add_task("task1-2", _task1, args=(2, False))
@@ -88,7 +88,7 @@ def test_synchronized():
     tasks.add_task("task2-2", _task2, args=(2, False))
 
     tasks.execute()
-    end_time = datetime.now()
+    end_time = datetime.now(tz=UTC)
 
     assert (end_time - start_time).seconds == 2
 
@@ -102,14 +102,14 @@ def test_synchronized_parameters():
         time.sleep(1)
         counter += 1
 
-    start_time = datetime.now()
+    start_time = datetime.now(tz=UTC)
     tasks = ConcurrentTasks()
     tasks.add_task("task1", task, args=(1,))
     tasks.add_task("task2", task, args=(1, 4))
     tasks.add_task("task3", task, args=(2,))
     tasks.add_task("task4", task, args=(3,))
     tasks.execute()
-    end_time = datetime.now()
+    end_time = datetime.now(tz=UTC)
 
     assert counter == 4
     assert (end_time - start_time).seconds == 2
