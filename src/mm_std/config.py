@@ -1,6 +1,5 @@
 import io
 from pathlib import Path
-from typing import Self
 
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
@@ -30,7 +29,7 @@ class BaseConfig(BaseModel):
         return v
 
     @classmethod
-    def read_config(cls, config_path: io.TextIOWrapper | str | Path, zip_password: str = "") -> Result[Self]:  # nosec
+    def read_config[T](cls: type[T], config_path: io.TextIOWrapper | str | Path, zip_password: str = "") -> Result[T]:  # nosec
         try:
             # is it zip archive?
             if isinstance(config_path, str) and config_path.endswith(".zip"):
