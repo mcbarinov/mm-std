@@ -1,9 +1,11 @@
 import io
+import sys
 from pathlib import Path
 
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from .print_ import print_plain
 from .result import Err, Ok, Result
 from .str import str_to_list
 from .zip import read_text_from_zip_archive
@@ -50,6 +52,23 @@ class BaseConfig(BaseModel):
 
             return Ok(cls(**yaml.full_load(config_path)))
         except ValidationError as err:
-            return Err("validator error", data={"validaton_errors": err})
+            return Err("validator_error", data={"errors": err.errors()})
         except Exception as err:
             return Err(err)
+
+    @classmethod
+    def read_config_or_exit[T](cls: type[T], config_path: io.TextIOWrapper | str | Path, zip_password: str = "") -> T:  # noqa: PYI019 # nosec
+        res = cls.read_config(config_path, zip_password)  # type: ignore[attr-defined]
+        if isinstance(res, Ok):
+            return res.unwrap()  # type: ignore[no-any-return]
+
+        if res.err == "validator_error":
+            print_plain("config validation errors")
+            for e in res.data["errors"]:
+                loc = e["loc"]
+                field = ".".join(str(lo) for lo in loc) if len(loc) > 0 else ""
+                print_plain(f"{field} {e['msg']}")
+        else:
+            print_plain(f"can't parse config file: {res.err}")
+
+        sys.exit(1)
