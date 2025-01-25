@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING, Any, Literal, NoReturn
+from collections.abc import Callable
+from typing import Any, Literal, NoReturn
 
 from pydantic_core import core_schema
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 
 class Ok[T]:

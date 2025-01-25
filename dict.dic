@@ -2,3 +2,4 @@ asctime
 levelname
 nosec
 pytestmark
+hrequest

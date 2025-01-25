@@ -1,4 +1,5 @@
 import json
+from collections.abc import Callable
 from dataclasses import asdict, is_dataclass
 from datetime import date, datetime
 from decimal import Decimal
@@ -28,8 +29,9 @@ class CustomJSONEncoder(JSONEncoder):
             return o.model_dump()
         if isinstance(o, Exception):
             return str(o)
+
         return JSONEncoder.default(self, o)
 
 
-def json_dumps(data: object) -> str:
-    return json.dumps(data, cls=CustomJSONEncoder)
+def json_dumps(data: object, default: Callable[[object], str] | None = None) -> str:
+    return json.dumps(data, cls=CustomJSONEncoder, default=default)
