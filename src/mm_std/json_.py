@@ -30,8 +30,8 @@ class CustomJSONEncoder(JSONEncoder):
         if isinstance(o, Exception):
             return str(o)
 
-        return JSONEncoder.default(self, o)
+        return super().default(o)
 
 
-def json_dumps(data: object, default: Callable[[object], str] | None = None) -> str:
+def json_dumps(data: object, default: Callable[[object], str] | None = str) -> str:
     return json.dumps(data, cls=CustomJSONEncoder, default=default)
