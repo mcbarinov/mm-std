@@ -40,7 +40,7 @@ def print_plain(messages: object, print_format: PrintFormat | None = None) -> No
         print(messages)  # noqa: T201
 
 
-def print_json(data: object, default: Callable[[object], str] | None = None, print_format: PrintFormat | None = None) -> None:
+def print_json(data: object, default: Callable[[object], str] | None = str, print_format: PrintFormat | None = None) -> None:
     if print_format is None or print_format == PrintFormat.JSON:
         rich.print_json(json_dumps(data, default=default))
 
