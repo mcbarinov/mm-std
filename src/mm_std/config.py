@@ -1,11 +1,12 @@
 import io
 import sys
 from pathlib import Path
+from typing import NoReturn
 
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from .print_ import print_plain
+from .print_ import print_json, print_plain
 from .result import Err, Ok, Result
 from .str import str_to_list
 from .zip import read_text_from_zip_archive
@@ -13,6 +14,10 @@ from .zip import read_text_from_zip_archive
 
 class BaseConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+    def print_and_exit(self, exclude: set[str] | None = None) -> NoReturn:
+        print_json(self.model_dump(exclude=exclude))
+        sys.exit(0)
 
     @classmethod
     def to_list_str_validator(
