@@ -19,7 +19,7 @@ class BaseConfig(BaseModel):
 
     @classmethod
     def read_toml_config_or_exit[T](cls: type[T], config_path: Path, zip_password: str = "") -> T:  # noqa: PYI019 # nosec
-        res = cls.read_config(config_path, zip_password)  # type: ignore[attr-defined]
+        res = cls.read_toml_config(config_path, zip_password)  # type: ignore[attr-defined]
         if isinstance(res, Ok):
             return res.unwrap()  # type: ignore[no-any-return]
 
