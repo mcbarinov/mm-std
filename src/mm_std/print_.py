@@ -28,27 +28,24 @@ def print_console(*messages: object, print_json: bool = False, default: Callable
         if isinstance(message, str):
             print(message)  # noqa: T201
         elif print_json:
-            rich.print_json(json_dumps(message, default=default))
+            rich.print_json(json_dumps(message, default_serializer=default))
         else:
             rich.print(message)
     else:
         rich.print(messages)
 
 
-def print_plain(messages: object, print_format: PrintFormat | None = None) -> None:
-    if print_format is None or print_format == PrintFormat.PLAIN:
-        print(messages)  # noqa: T201
+def print_plain(messages: object) -> None:
+    print(messages)  # noqa: T201
 
 
-def print_json(data: object, default: Callable[[object], str] | None = str, print_format: PrintFormat | None = None) -> None:
-    if print_format is None or print_format == PrintFormat.JSON:
-        rich.print_json(json_dumps(data, default=default))
+def print_json(data: object, default_serializer: Callable[[object], str] | None = None) -> None:
+    rich.print_json(json_dumps(data, default_serializer=default_serializer))
 
 
-def print_table(title: str, columns: list[str], rows: list[list[Any]], print_format: PrintFormat | None = None) -> None:
-    if print_format is None or print_format == PrintFormat.TABLE:
-        table = Table(*columns, title=title)
-        for row in rows:
-            table.add_row(*(str(cell) for cell in row))
-        console = Console()
-        console.print(table)
+def print_table(title: str, columns: list[str], rows: list[list[Any]]) -> None:
+    table = Table(*columns, title=title)
+    for row in rows:
+        table.add_row(*(str(cell) for cell in row))
+    console = Console()
+    console.print(table)

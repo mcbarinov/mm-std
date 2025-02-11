@@ -33,5 +33,5 @@ class CustomJSONEncoder(JSONEncoder):
         return super().default(o)
 
 
-def json_dumps(data: object, default: Callable[[object], str] | None = str) -> str:
-    return json.dumps(data, cls=CustomJSONEncoder, default=default)
+def json_dumps(data: object, default_serializer: Callable[[object], str] | None = str) -> str:
+    return json.dumps(data, cls=CustomJSONEncoder, default=default_serializer)

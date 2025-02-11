@@ -32,4 +32,4 @@ def test_json_dumps():
 
 def test_json_dumps_with_default():
     data = {"value": Data2(value=42)}
-    assert json_dumps(data, default=lambda o: o.to_str()) == """{"value": "Data2: value=42"}"""
+    assert json_dumps(data, default_serializer=lambda o: o.to_str()) == """{"value": "Data2: value=42"}"""
