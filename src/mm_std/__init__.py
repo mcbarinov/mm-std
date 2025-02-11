@@ -28,6 +28,7 @@ from .net import check_port as check_port
 from .net import get_free_local_port as get_free_local_port
 from .print_ import PrintFormat as PrintFormat
 from .print_ import fatal as fatal
+from .print_ import pretty_print_toml as pretty_print_toml
 from .print_ import print_console as print_console
 from .print_ import print_json as print_json
 from .print_ import print_plain as print_plain

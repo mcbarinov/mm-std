@@ -3,3 +3,6 @@ levelname
 nosec
 pytestmark
 hrequest
+monokai
+dotenv
+fernet

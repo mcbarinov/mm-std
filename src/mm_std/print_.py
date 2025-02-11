@@ -5,6 +5,7 @@ from typing import Any, NoReturn
 
 import rich
 from rich.console import Console
+from rich.syntax import Syntax
 from rich.table import Table
 
 from mm_std.json_ import json_dumps
@@ -49,3 +50,9 @@ def print_table(title: str, columns: list[str], rows: list[list[Any]]) -> None:
         table.add_row(*(str(cell) for cell in row))
     console = Console()
     console.print(table)
+
+
+def pretty_print_toml(data: str, line_numbers: bool = False, theme: str = "monokai") -> None:
+    console = Console()
+    syntax = Syntax(data, "toml", theme=theme, line_numbers=line_numbers)
+    console.print(syntax)
