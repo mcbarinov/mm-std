@@ -5,6 +5,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 from json import JSONEncoder
+from pathlib import Path
 
 from pydantic import BaseModel
 
@@ -18,6 +19,8 @@ class CustomJSONEncoder(JSONEncoder):
         if isinstance(o, Err):
             return {"err": o.err}
         if isinstance(o, Decimal):
+            return str(o)
+        if isinstance(o, Path):
             return str(o)
         if isinstance(o, datetime | date):
             return o.isoformat()
