@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable
-from typing import Any, Literal, NoReturn
+from typing import Any, Literal, NoReturn, TypeVar, Union
 
 from pydantic_core import core_schema
 
@@ -240,7 +240,8 @@ class Err:
         )
 
 
-type Result[T] = Ok[T] | Err
+T = TypeVar("T")
+Result = Union[Ok[T], Err]  # noqa: UP007
 
 
 class UnwrapError(Exception):

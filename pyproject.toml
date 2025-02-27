@@ -1,6 +1,6 @@
 [project]
 name = "mm-std"
-version = "0.3.2"
+version = "0.3.3"
 description = ""
 requires-python = ">=3.12"
 dependencies = [
@@ -21,10 +21,10 @@ build-backend = "hatchling.build"
 dev-dependencies = [
     "pytest~=8.3.4",
     "pytest-xdist~=3.6.1",
-    "pytest-httpserver~=1.1.1",
-    "ruff~=0.9.6",
+    "pytest-httpserver~=1.1.2",
+    "ruff~=0.9.7",
     "pip-audit~=2.8.0",
-    "bandit~=1.8.2",
+    "bandit~=1.8.3",
     "mypy~=1.15.0",
     "types-PyYAML~=6.0.12.20241230",
 ]
