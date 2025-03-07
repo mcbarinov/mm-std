@@ -1,6 +1,6 @@
 [project]
 name = "mm-std"
-version = "0.3.4"
+version = "0.3.5"
 description = ""
 requires-python = ">=3.12"
 dependencies = [
@@ -8,9 +8,9 @@ dependencies = [
     "pydash~=8.0.5",
     "python-dotenv~=1.0.1",
     "pydantic~=2.10.6",
-    "PyYAML~=6.0.2",
     "cryptography~=44.0.2",
     "rich~=13.9.4",
+    "tomlkit~=0.13.2",
 ]
 
 [build-system]
@@ -26,7 +26,6 @@ dev-dependencies = [
     "pip-audit~=2.8.0",
     "bandit~=1.8.3",
     "mypy~=1.15.0",
-    "types-PyYAML~=6.0.12.20241230",
 ]
 
 [tool.mypy]

@@ -44,4 +44,6 @@ from .str import number_with_separator as number_with_separator
 from .str import str_ends_with_any as str_ends_with_any
 from .str import str_starts_with_any as str_starts_with_any
 from .str import str_to_list as str_to_list
+from .toml import toml_dumps as toml_dumps
+from .toml import toml_loads as toml_loads
 from .zip import read_text_from_zip_archive as read_text_from_zip_archive
