@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable
-from typing import Any, Literal, NoReturn, TypeVar, Union
+from typing import Any, ClassVar, Literal, NoReturn, TypeVar, Union
 
 from pydantic_core import core_schema
 
 
 class Ok[T]:
+    model_config: ClassVar[dict[str, object]] = {"arbitrary_types_allowed": True}
     __match_args__ = ("ok",)
 
     def __init__(self, ok: T, data: object = None) -> None:
@@ -115,6 +116,7 @@ class Ok[T]:
 
 
 class Err:
+    model_config: ClassVar[dict[str, object]] = {"arbitrary_types_allowed": True}
     __match_args__ = ("err",)
 
     def __init__(self, err: str | Exception, data: object = None) -> None:

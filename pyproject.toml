@@ -1,6 +1,6 @@
 [project]
 name = "mm-std"
-version = "0.3.3"
+version = "0.3.4"
 description = ""
 requires-python = ">=3.12"
 dependencies = [
@@ -9,7 +9,7 @@ dependencies = [
     "python-dotenv~=1.0.1",
     "pydantic~=2.10.6",
     "PyYAML~=6.0.2",
-    "cryptography~=44.0.1",
+    "cryptography~=44.0.2",
     "rich~=13.9.4",
 ]
 
@@ -19,10 +19,10 @@ build-backend = "hatchling.build"
 
 [tool.uv]
 dev-dependencies = [
-    "pytest~=8.3.4",
+    "pytest~=8.3.5",
     "pytest-xdist~=3.6.1",
     "pytest-httpserver~=1.1.2",
-    "ruff~=0.9.7",
+    "ruff~=0.9.9",
     "pip-audit~=2.8.0",
     "bandit~=1.8.3",
     "mypy~=1.15.0",
