@@ -13,7 +13,7 @@ from .date import parse_date as parse_date
 from .date import utc_delta as utc_delta
 from .date import utc_now as utc_now
 from .date import utc_random as utc_random
-from .dict import replace_empty_values as replace_empty_values
+from .dict import replace_empty_dict_values as replace_empty_dict_values
 from .env import get_dotenv as get_dotenv
 from .http_ import CHROME_USER_AGENT as CHROME_USER_AGENT
 from .http_ import FIREFOX_USER_AGENT as FIREFOX_USER_AGENT
