@@ -70,6 +70,11 @@ def str_ends_with_any(value: str, prefixes: list[str]) -> bool:
     return any(value.endswith(prefix) for prefix in prefixes)
 
 
+def str_contains_any(value: str, substrings: list[str]) -> bool:
+    """Check if str contains any of the given substrings"""
+    return any(substring in value for substring in substrings)
+
+
 def split_on_plus_minus_tokens(value: str) -> list[str]:
     value = "".join(value.split())
     if not value:
