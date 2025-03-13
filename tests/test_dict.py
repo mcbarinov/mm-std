@@ -26,3 +26,8 @@ def test_replace_empty_dict_values():
     # Note: The function doesn't recursively process nested dictionaries
     result_nested = replace_empty_dict_values(nested_data, nested_defaults)
     assert result_nested == {"a": "default_a", "b": {"x": None, "y": "value"}}
+
+    # Test with false_is_empty=True
+    data = {"a": "s", "b": False}
+    assert replace_empty_dict_values(data) == {"a": "s", "b": False}
+    assert replace_empty_dict_values(data, false_is_empty=True) == {"a": "s"}
