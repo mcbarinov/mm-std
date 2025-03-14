@@ -1,7 +1,7 @@
 import sys
 import tomllib
 from pathlib import Path
-from typing import NoReturn
+from typing import NoReturn, Self
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
@@ -35,7 +35,7 @@ class BaseConfig(BaseModel):
         sys.exit(1)
 
     @classmethod
-    def read_toml_config[T](cls: type[T], config_path: Path, zip_password: str = "") -> Result[T]:  # nosec
+    def read_toml_config(cls, config_path: Path, zip_password: str = "") -> Result[Self]:  # nosec
         try:
             config_path = config_path.expanduser()
             if config_path.name.endswith(".zip"):

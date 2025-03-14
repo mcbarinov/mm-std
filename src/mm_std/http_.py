@@ -3,9 +3,9 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 from urllib.parse import urlencode
 
-import httpx
 import pydash
-from httpx._types import AuthTypes
+import requests
+from requests.auth import AuthBase
 
 from mm_std.result import Err, Ok, Result
 
@@ -90,7 +90,7 @@ def hrequest(
     timeout: float = 10,
     user_agent: str | None = None,
     json_params: bool = True,
-    auth: AuthTypes | None = None,
+    auth: AuthBase | tuple[str, str] | None = None,
     verify: bool = True,
 ) -> HResponse:
     query_params: dict[str, Any] | None = None
@@ -108,11 +108,18 @@ def hrequest(
     else:
         data = params
 
+    proxies = None
+    if proxy:
+        proxies = {
+            "http": proxy,
+            "https": proxy,
+        }
+
     try:
-        r = httpx.request(
+        r = requests.request(
             method,
             url,
-            proxy=proxy,
+            proxies=proxies,
             timeout=timeout,
             cookies=cookies,
             auth=auth,
@@ -123,11 +130,11 @@ def hrequest(
             data=data,
         )
         return HResponse(code=r.status_code, body=r.text, headers=dict(r.headers))
-    except httpx.TimeoutException:
+    except requests.exceptions.Timeout:
         return HResponse(error="timeout")
-    except httpx.ProxyError:
+    except requests.exceptions.ProxyError:
         return HResponse(error="proxy_error")
-    except httpx.HTTPError as err:
+    except requests.exceptions.RequestException as err:
         return HResponse(error=f"connection_error: {err}")
     except Exception as err:
         return HResponse(error=f"exception: {err}")
