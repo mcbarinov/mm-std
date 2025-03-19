@@ -11,6 +11,8 @@ dependencies = [
     "rich~=13.9.4",
     "tomlkit~=0.13.2",
     "requests[socks]~=2.32.3",
+    "anyio>=4.9.0",
+    "pydantic-settings>=2.8.1",
 ]
 
 [build-system]
@@ -22,7 +24,7 @@ dev-dependencies = [
     "pytest~=8.3.5",
     "pytest-xdist~=3.6.1",
     "pytest-httpserver~=1.1.2",
-    "ruff~=0.10.0",
+    "ruff~=0.11.0",
     "pip-audit~=2.8.0",
     "bandit~=1.8.3",
     "mypy~=1.15.0",
