@@ -3,6 +3,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 from urllib.parse import urlencode
 
+import httpx
 import pydash
 import requests
 from requests.auth import AuthBase
@@ -140,6 +141,62 @@ def hrequest(
         return HResponse(error=f"exception: {err}")
 
 
+async def async_hrequest(
+    url: str,
+    *,
+    method: str = "GET",
+    proxy: str | None = None,
+    params: dict[str, Any] | None = None,
+    headers: dict[str, Any] | None = None,
+    cookies: dict[str, Any] | None = None,
+    timeout: float = 10,  # noqa: ASYNC109
+    user_agent: str | None = None,
+    json_params: bool = True,
+    auth: httpx.Auth | tuple[str, str] | None = None,
+    verify: bool = True,
+) -> HResponse:
+    query_params: dict[str, Any] | None = None
+    data: dict[str, Any] | None = None
+    json_: dict[str, Any] | None = None
+    method = method.upper()
+    if not headers:
+        headers = {}
+    if user_agent:
+        headers["user-agent"] = user_agent
+    if method == "GET":
+        query_params = params
+    elif json_params:
+        json_ = params
+    else:
+        data = params
+
+    try:
+        async with httpx.AsyncClient(
+            proxy=proxy,
+            timeout=timeout,
+            cookies=cookies,
+            auth=auth,
+            verify=verify,
+        ) as client:
+            r = await client.request(
+                method,
+                url,
+                headers=headers,
+                params=query_params,
+                json=json_,
+                data=data,
+            )
+            return HResponse(code=r.status_code, body=r.text, headers=dict(r.headers))
+    except httpx.TimeoutException:
+        return HResponse(error="timeout")
+    except httpx.ProxyError:
+        return HResponse(error="proxy_error")
+    except httpx.RequestError as err:
+        return HResponse(error=f"connection_error: {err}")
+    except Exception as err:
+        return HResponse(error=f"exception: {err}")
+
+
 def add_query_params_to_url(url: str, params: dict[str, object]) -> str:
     query_params = urlencode({k: v for k, v in params.items() if v is not None})
     if query_params:
@@ -148,3 +205,4 @@ def add_query_params_to_url(url: str, params: dict[str, object]) -> str:
 
 
 hr = hrequest
+ahr = async_hrequest
