@@ -1,8 +1,10 @@
+import functools
 import threading
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from logging import Logger
+from typing import ParamSpec, TypeVar
 
 import anyio
 
@@ -105,3 +107,18 @@ class AsyncScheduler:
             self._thread.join(timeout=5)
             self._thread = None
         self._logger.info("Scheduler stopped")
+
+
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+def async_synchronized(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+    lock = anyio.Lock()
+
+    @functools.wraps(func)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        async with lock:
+            return await func(*args, **kwargs)
+
+    return wrapper
