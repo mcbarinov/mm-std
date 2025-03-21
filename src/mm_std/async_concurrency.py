@@ -71,7 +71,7 @@ class AsyncScheduler:
                 while self._running:  # noqa: ASYNC110
                     await anyio.sleep(0.1)
             except anyio.get_cancelled_exc_class():
-                self._logger.info("Task group cancelled. Exiting _start_all_tasks.")
+                self._logger.debug("Task group cancelled. Exiting _start_all_tasks.")
 
     def start(self) -> None:
         """
@@ -81,11 +81,11 @@ class AsyncScheduler:
         which runs an AnyIO event loop.
         """
         if self._running:
-            self._logger.warning("Scheduler already running")
+            self._logger.warning("AsyncScheduler already running")
             return
         self._running = True
-        self._logger.info("Starting scheduler")
-        self._thread = threading.Thread(target=lambda: anyio.run(self._start_all_tasks), daemon=True)
+        self._logger.debug("Starting AsyncScheduler")
+        self._thread = threading.Thread(target=lambda: anyio.run(self._start_all_tasks), daemon=True, name="AsyncScheduler")
         self._thread.start()
 
     def stop(self) -> None:
@@ -96,9 +96,9 @@ class AsyncScheduler:
         This method then waits for the background thread to finish.
         """
         if not self._running:
-            self._logger.warning("Scheduler not running")
+            self._logger.warning("AsyncScheduler not running")
             return
-        self._logger.info("Stopping scheduler")
+        self._logger.debug("Stopping AsyncScheduler")
         self._running = False
         if self._cancel_scope is not None:
             self._cancel_scope.cancel()
@@ -106,7 +106,7 @@ class AsyncScheduler:
         if self._thread:
             self._thread.join(timeout=5)
             self._thread = None
-        self._logger.info("Scheduler stopped")
+        self._logger.debug("AsyncScheduler stopped")
 
 
 P = ParamSpec("P")
