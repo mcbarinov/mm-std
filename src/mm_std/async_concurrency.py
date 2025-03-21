@@ -23,6 +23,7 @@ class AsyncScheduler:
         args: Args = ()
         kwargs: Kwargs = field(default_factory=dict)
         run_count: int = 0
+        error_count: int = 0
         last_run: datetime | None = None
         running: bool = False
 
@@ -50,6 +51,7 @@ class AsyncScheduler:
             try:
                 await task.func(*task.args, **task.kwargs)
             except Exception:
+                task.error_count += 1
                 self._logger.exception("AsyncScheduler exception")
 
             # Calculate elapsed time and sleep if needed so that tasks never overlap.
