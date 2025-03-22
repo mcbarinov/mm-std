@@ -1,17 +1,12 @@
-import functools
 import threading
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 from logging import Logger
-from typing import ParamSpec, TypeVar
 
 import anyio
 
-# Type aliases for clarity
-AsyncFunc = Callable[..., Awaitable[object]]
-Args = tuple[object, ...]
-Kwargs = dict[str, object]
+from mm_std.date import utc_now
+from mm_std.types_ import Args, AsyncFunc, Kwargs
 
 
 class AsyncScheduler:
@@ -46,7 +41,7 @@ class AsyncScheduler:
         """Internal loop for running a single task repeatedly."""
         task = self.tasks[task_id]
         while self._running:
-            task.last_run = datetime.now(UTC)
+            task.last_run = utc_now()
             task.run_count += 1
             try:
                 await task.func(*task.args, **task.kwargs)
@@ -55,7 +50,7 @@ class AsyncScheduler:
                 self._logger.exception("AsyncScheduler exception")
 
             # Calculate elapsed time and sleep if needed so that tasks never overlap.
-            elapsed = (datetime.now(UTC) - task.last_run).total_seconds()
+            elapsed = (utc_now() - task.last_run).total_seconds()
             sleep_time = task.interval - elapsed
             if sleep_time > 0:
                 try:
@@ -109,18 +104,3 @@ class AsyncScheduler:
             self._thread.join(timeout=5)
             self._thread = None
         self._logger.debug("AsyncScheduler stopped")
-
-
-P = ParamSpec("P")
-R = TypeVar("R")
-
-
-def async_synchronized(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
-    lock = anyio.Lock()
-
-    @functools.wraps(func)
-    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-        async with lock:
-            return await func(*args, **kwargs)
-
-    return wrapper
