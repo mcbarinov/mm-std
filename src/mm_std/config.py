@@ -5,8 +5,8 @@ from typing import NoReturn, Self
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from ._old_result import Err, Ok, Result
 from .print_ import print_json, print_plain
-from .result import Err, Ok, Result
 from .zip import read_text_from_zip_archive
 
 

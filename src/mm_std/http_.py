@@ -8,7 +8,7 @@ import pydash
 import requests
 from requests.auth import AuthBase
 
-from mm_std.result import Err, Ok, Result
+from mm_std._old_result import Err, Ok, Result
 
 FIREFOX_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:134.0) Gecko/20100101 Firefox/134.0"
 SAFARI_USER_AGENT = (

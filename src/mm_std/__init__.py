@@ -1,3 +1,7 @@
+from ._old_result import Err as Err
+from ._old_result import Ok as Ok
+from ._old_result import Result as Result
+from ._old_result import try_ok as try_ok
 from .command import CommandResult as CommandResult
 from .command import run_command as run_command
 from .command import run_ssh_command as run_ssh_command
@@ -41,10 +45,6 @@ from .print_ import print_table as print_table
 from .random_ import random_choice as random_choice
 from .random_ import random_decimal as random_decimal
 from .random_ import random_str_choice as random_str_choice
-from .result import Err as Err
-from .result import Ok as Ok
-from .result import Result as Result
-from .result import try_ok as try_ok
 from .str import number_with_separator as number_with_separator
 from .str import str_contains_any as str_contains_any
 from .str import str_ends_with_any as str_ends_with_any

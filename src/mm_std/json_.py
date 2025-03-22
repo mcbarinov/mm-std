@@ -9,7 +9,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from mm_std.result import Err, Ok
+from mm_std._old_result import Err, Ok
 
 
 class CustomJSONEncoder(JSONEncoder):
