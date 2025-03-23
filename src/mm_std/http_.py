@@ -8,7 +8,7 @@ import pydash
 import requests
 from requests.auth import AuthBase
 
-from mm_std._old_result import Err, Ok, Result
+from mm_std.result import Result
 
 FIREFOX_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:134.0) Gecko/20100101 Firefox/134.0"
 SAFARI_USER_AGENT = (
@@ -58,11 +58,11 @@ class HResponse:
                 return self.headers[key]
         return None
 
-    def to_err_result[T](self, error: str | None = None) -> Err:
-        return Err(error or self.error or "error", data=asdict(self))
+    def to_err_result[T](self, error: str | None = None) -> Result[T]:
+        return Result.err(error or self.error or "error", data=asdict(self))
 
     def to_ok_result[T](self, result: T) -> Result[T]:
-        return Ok(result, data=asdict(self))
+        return Result.ok(result, data=asdict(self))
 
     def is_error(self) -> bool:
         return self.error is not None

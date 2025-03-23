@@ -5,7 +5,7 @@ from typing import Generic, NoReturn, TypeVar, cast, final
 
 T = TypeVar("T")
 U = TypeVar("U")
-E = TypeVar("E", bound=Exception)
+E = TypeVar("E", bound=Exception | str)
 
 
 @final
@@ -18,6 +18,7 @@ class Result(Generic[T]):
     __match_args__ = ("_value", "_error")
 
     def __init__(self, value: T | None, error: Exception | None, data: object | None) -> None:
+        """Don't use __init__, it's for mypy only"""
         self._value = value
         self._error = error
         self._data = data
@@ -76,16 +77,15 @@ class Result(Generic[T]):
 
     def map(self, fn: Callable[[T], U]) -> Result[U]:
         """Apply function to value if ok, otherwise propagate error."""
-        if self._error:
+        if self._error is not None:
             return Result[U].err(self._error, self._data)
-            # return Result[U]._create_raw(None, self._error, self._data)
         try:
             # None is a valid value, so we cast to satisfy mypy
             return Result.ok(fn(cast(T, self._value)), self._data)
         except Exception as e:
             return Result.err(e, self._data)
 
-    def map_err(self, fn: Callable[[Exception], E]) -> Result[T]:
+    def map_err(self, fn: Callable[[Exception | str], E]) -> Result[T]:
         """Apply function to error if err, otherwise propagate value."""
         if self._error is None:
             return self
@@ -98,14 +98,13 @@ class Result(Generic[T]):
         """Chain operation that returns another Result."""
         if self._error:
             return Result[U].err(self._error, self._data)
-            # return Result[U]._create_raw(None, self._error, self._data)
         try:
             # None is a valid value, so we cast to satisfy mypy
             return fn(cast(T, self._value))
         except Exception as e:
             return Result.err(e, self._data)
 
-    def or_else(self, fn: Callable[[Exception], Result[T]]) -> Result[T]:
+    def or_else(self, fn: Callable[[Exception | str], Result[T]]) -> Result[T]:
         """Chain operation that handles an error by returning another Result."""
         if self._error is None:
             return self
