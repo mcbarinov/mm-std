@@ -3,6 +3,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 from urllib.parse import urlencode
 
+import anyio
 import httpx
 import pydash
 import requests
@@ -170,31 +171,33 @@ async def async_hrequest(
     else:
         data = params
 
-    try:
-        async with httpx.AsyncClient(
-            proxy=proxy,
-            timeout=timeout,
-            cookies=cookies,
-            auth=auth,
-            verify=verify,
-        ) as client:
-            r = await client.request(
-                method,
-                url,
-                headers=headers,
-                params=query_params,
-                json=json_,
-                data=data,
-            )
-            return HResponse(code=r.status_code, body=r.text, headers=dict(r.headers))
-    except httpx.TimeoutException:
-        return HResponse(error="timeout")
-    except httpx.ProxyError:
-        return HResponse(error="proxy_error")
-    except httpx.RequestError as err:
-        return HResponse(error=f"connection_error: {err}")
-    except Exception as err:
-        return HResponse(error=f"exception: {err}")
+    with anyio.move_on_after(timeout):
+        try:
+            async with httpx.AsyncClient(
+                proxy=proxy,
+                timeout=timeout,
+                cookies=cookies,
+                auth=auth,
+                verify=verify,
+            ) as client:
+                r = await client.request(
+                    method,
+                    url,
+                    headers=headers,
+                    params=query_params,
+                    json=json_,
+                    data=data,
+                )
+                return HResponse(code=r.status_code, body=r.text, headers=dict(r.headers))
+        except httpx.TimeoutException:
+            return HResponse(error="timeout")
+        except httpx.ProxyError:
+            return HResponse(error="proxy_error")
+        except httpx.RequestError as err:
+            return HResponse(error=f"connection_error: {err}")
+        except Exception as err:
+            return HResponse(error=f"exception: {err}")
+    return HResponse(error="timeout")
 
 
 def add_query_params_to_url(url: str, params: dict[str, object]) -> str:
