@@ -1,7 +1,9 @@
+import asyncio
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime
 from logging import Logger
+from typing import Any
 
 import anyio
 
@@ -26,6 +28,7 @@ class AsyncScheduler:
         self.tasks: dict[str, AsyncScheduler.TaskInfo] = {}
         self._running: bool = False
         self._cancel_scope: anyio.CancelScope | None = None
+        self._main_task: asyncio.Task[Any] | None = None
         self._thread: threading.Thread | None = None
         self._logger = logger
 
@@ -82,8 +85,9 @@ class AsyncScheduler:
             return
         self._running = True
         self._logger.debug("Starting AsyncScheduler")
-        self._thread = threading.Thread(target=lambda: anyio.run(self._start_all_tasks), daemon=True, name="AsyncScheduler")
-        self._thread.start()
+
+        # Create a task in the current event loop
+        self._main_task = asyncio.create_task(self._start_all_tasks())
 
     def stop(self) -> None:
         """
