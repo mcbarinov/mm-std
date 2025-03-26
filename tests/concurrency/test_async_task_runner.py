@@ -1,20 +1,21 @@
-import anyio
+import asyncio
+
 import pytest
 
 from mm_std import AsyncTaskRunner
 
-pytestmark = pytest.mark.anyio
+pytestmark = pytest.mark.asyncio
 
 
 async def test_basic_execution():
     runner = AsyncTaskRunner(max_concurrent_tasks=2)
 
     async def example_task(value):
-        await anyio.sleep(0.1)
+        await asyncio.sleep(0.1)
         return value * 2
 
-    runner.add_task("task1", example_task, 5)
-    runner.add_task("task2", example_task, 10)
+    runner.add_task("task1", example_task(5))
+    runner.add_task("task2", example_task(10))
 
     result = await runner.run()
 
@@ -33,8 +34,8 @@ async def test_exception_handling():
     async def failing_task():
         raise ValueError("Expected error")
 
-    runner.add_task("success", successful_task)
-    runner.add_task("fail", failing_task)
+    runner.add_task("success", successful_task())
+    runner.add_task("fail", failing_task())
 
     result = await runner.run()
 
@@ -54,12 +55,12 @@ async def test_concurrency_limit():
         nonlocal running_tasks, max_observed_concurrency
         running_tasks += 1
         max_observed_concurrency = max(max_observed_concurrency, running_tasks)
-        await anyio.sleep(0.2)  # Long enough to ensure overlap
+        await asyncio.sleep(0.2)  # Long enough to ensure overlap
         running_tasks -= 1
         return task_num
 
     for i in range(5):
-        runner.add_task(f"task{i}", concurrent_task, i)
+        runner.add_task(f"task{i}", concurrent_task(i))
 
     result = await runner.run()
 
@@ -72,11 +73,11 @@ async def test_timeout():
     runner = AsyncTaskRunner(max_concurrent_tasks=2, timeout=0.3)
 
     async def slow_task():
-        await anyio.sleep(1.0)
+        await asyncio.sleep(1.0)
         return "completed"
 
-    runner.add_task("slow1", slow_task)
-    runner.add_task("slow2", slow_task)
+    runner.add_task("slow1", slow_task())
+    runner.add_task("slow2", slow_task())
 
     result = await runner.run()
 
@@ -90,14 +91,14 @@ async def test_runner_reuse():
     async def simple_task():
         return "done"
 
-    runner.add_task("task1", simple_task)
+    runner.add_task("task1", simple_task())
     await runner.run()
 
     with pytest.raises(RuntimeError):
         await runner.run()
 
     with pytest.raises(RuntimeError):
-        runner.add_task("task2", simple_task)
+        runner.add_task("task2", simple_task())
 
 
 async def test_task_id_validation():
@@ -107,14 +108,14 @@ async def test_task_id_validation():
         return "done"
 
     with pytest.raises(ValueError):
-        runner.add_task("", simple_task)
+        runner.add_task("", simple_task())
 
-    runner.add_task("task1", simple_task)
+    runner.add_task("task1", simple_task())
 
     with pytest.raises(ValueError):
-        runner.add_task("task1", simple_task)
+        runner.add_task("task1", simple_task())
 
 
-def test_invalid_timeout():
+async def test_invalid_timeout():
     with pytest.raises(ValueError):
         AsyncTaskRunner(max_concurrent_tasks=2, timeout=-1)

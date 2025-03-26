@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+import asyncio
+from collections.abc import Awaitable
 from dataclasses import dataclass
 from typing import Any
-
-import anyio
 
 
 class AsyncTaskRunner:
@@ -25,20 +24,20 @@ class AsyncTaskRunner:
         """Individual task representation"""
 
         task_id: str
-        async_func: Callable[..., Awaitable[Any]]
-        args: tuple[Any, ...]
-        kwargs: dict[str, Any]
+        awaitable: Awaitable[Any]
 
-    def __init__(self, max_concurrent_tasks: int, timeout: float | None = None) -> None:
+    def __init__(self, max_concurrent_tasks: int, timeout: float | None = None, name: str | None = None) -> None:
         """
         :param max_concurrent_tasks: Maximum number of tasks that can run concurrently.
         :param timeout: Optional overall timeout in seconds for running all tasks.
+        :param name: Optional name for the runner.
         """
         if timeout is not None and timeout <= 0:
             raise ValueError("Timeout must be positive if specified.")
         self.max_concurrent_tasks: int = max_concurrent_tasks
         self.timeout: float | None = timeout
-        self.limiter: anyio.CapacityLimiter = anyio.CapacityLimiter(max_concurrent_tasks)
+        self.name = name
+        self.semaphore: asyncio.Semaphore = asyncio.Semaphore(max_concurrent_tasks)
         self._tasks: list[AsyncTaskRunner.Task] = []
         self._was_run: bool = False
         self._task_ids: set[str] = set()
@@ -46,17 +45,13 @@ class AsyncTaskRunner:
     def add_task(
         self,
         task_id: str,
-        async_func: Callable[..., Awaitable[Any]],
-        *args: object,
-        **kwargs: object,
+        awaitable: Awaitable[Any],
     ) -> None:
         """
         Adds a task to the runner that will be executed when run() is called.
 
         :param task_id: Unique identifier for the task.
-        :param async_func: The asynchronous function to execute.
-        :param args: Positional arguments for async_func.
-        :param kwargs: Keyword arguments for async_func.
+        :param awaitable: The awaitable (coroutine) to execute.
         :raises RuntimeError: If the runner has already been used.
         :raises ValueError: If task_id is empty or already exists.
         """
@@ -70,11 +65,11 @@ class AsyncTaskRunner:
             raise ValueError(f"Task ID '{task_id}' already exists. All task IDs must be unique.")
 
         self._task_ids.add(task_id)
-        self._tasks.append(AsyncTaskRunner.Task(task_id, async_func, args, kwargs))
+        self._tasks.append(AsyncTaskRunner.Task(task_id, awaitable))
 
     async def run(self) -> AsyncTaskRunner.Result:
         """
-        Executes all added tasks with concurrency limited by the capacity limiter.
+        Executes all added tasks with concurrency limited by the semaphore.
         If a timeout is specified, non-finished tasks are cancelled.
 
         :return: AsyncTaskRunner.Result containing task results, exceptions, and flags indicating overall status.
@@ -89,24 +84,30 @@ class AsyncTaskRunner:
         is_timeout: bool = False
 
         async def run_task(task: AsyncTaskRunner.Task) -> None:
-            async with self.limiter:
+            async with self.semaphore:
                 try:
-                    res: Any = await task.async_func(*task.args, **task.kwargs)
+                    res: Any = await task.awaitable
                     results[task.task_id] = res
                 except Exception as e:
                     exceptions[task.task_id] = e
 
+        # Create asyncio tasks for all runner tasks
+        tasks = [asyncio.create_task(run_task(task)) for task in self._tasks]
+
         try:
             if self.timeout is not None:
-                with anyio.fail_after(self.timeout):
-                    async with anyio.create_task_group() as tg:
-                        for task in self._tasks:
-                            tg.start_soon(run_task, task)
+                # Run with timeout
+                await asyncio.wait_for(asyncio.gather(*tasks), timeout=self.timeout)
             else:
-                async with anyio.create_task_group() as tg:
-                    for task in self._tasks:
-                        tg.start_soon(run_task, task)
+                # Run without timeout
+                await asyncio.gather(*tasks)
         except TimeoutError:
+            # Cancel all running tasks on timeout
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            # Wait for tasks to complete cancellation
+            await asyncio.gather(*tasks, return_exceptions=True)
             is_timeout = True
 
         is_ok: bool = (not exceptions) and (not is_timeout)

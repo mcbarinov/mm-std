@@ -22,10 +22,10 @@ from .http_ import CHROME_USER_AGENT as CHROME_USER_AGENT
 from .http_ import FIREFOX_USER_AGENT as FIREFOX_USER_AGENT
 from .http_ import HResponse as HResponse
 from .http_ import add_query_params_to_url as add_query_params_to_url
-from .http_ import ahr as ahr
-from .http_ import async_hrequest as async_hrequest
 from .http_ import hr as hr
+from .http_ import hra as hra
 from .http_ import hrequest as hrequest
+from .http_ import hrequest_async as hrequest_async
 from .json_ import CustomJSONEncoder as CustomJSONEncoder
 from .json_ import json_dumps as json_dumps
 from .log import init_logger as init_logger
