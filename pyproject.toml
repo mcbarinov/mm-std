@@ -1,6 +1,6 @@
 [project]
 name = "mm-std"
-version = "0.3.16"
+version = "0.3.17"
 description = ""
 requires-python = ">=3.12"
 dependencies = [
@@ -11,7 +11,6 @@ dependencies = [
     "rich~=13.9.4",
     "tomlkit~=0.13.2",
     "requests[socks]~=2.32.3",
-    "anyio>=4.9.0",
     "pydantic-settings>=2.8.1",
     "aiohttp~=3.11.14",
     "aiohttp-socks~=0.10.1",
@@ -68,6 +67,7 @@ ignore = [
     "RET503", # flake8-return: implicit-return
     "COM812", # it's used in ruff formatter
     "ASYNC109",
+    "G004"
 ]
 [tool.ruff.lint.pep8-naming]
 classmethod-decorators = ["field_validator"]
