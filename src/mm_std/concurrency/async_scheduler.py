@@ -1,11 +1,15 @@
 import asyncio
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from logging import Logger
 from typing import Any
 
 from mm_std.date import utc_now
-from mm_std.types_ import Args, AsyncFunc, Kwargs
+
+type AsyncFunc = Callable[..., Awaitable[object]]
+type Args = tuple[object, ...]
+type Kwargs = dict[str, object]
 
 
 class AsyncScheduler:
@@ -30,18 +34,14 @@ class AsyncScheduler:
         last_run: datetime | None = None
         running: bool = False
 
-    def __init__(self, logger: Logger) -> None:
-        """
-        Initialize the async scheduler.
-
-        Args:
-            logger: Logger instance for recording scheduler events
-        """
+    def __init__(self, logger: Logger, name: str = "AsyncScheduler") -> None:
+        """Initialize the async scheduler."""
         self.tasks: dict[str, AsyncScheduler.TaskInfo] = {}
         self._running: bool = False
         self._tasks: list[asyncio.Task[Any]] = []
         self._main_task: asyncio.Task[Any] | None = None
         self._logger = logger
+        self._name = name
 
     def add_task(self, task_id: str, interval: float, func: AsyncFunc, args: Args = (), kwargs: Kwargs | None = None) -> None:
         """
@@ -100,7 +100,7 @@ class AsyncScheduler:
         self._tasks = []
 
         for task_id in self.tasks:
-            task = asyncio.create_task(self._run_task(task_id))
+            task = asyncio.create_task(self._run_task(task_id), name=self._name + "-" + task_id)
             self._tasks.append(task)
 
         try:
@@ -151,3 +151,20 @@ class AsyncScheduler:
             self._main_task.cancel()
 
         self._logger.debug("AsyncScheduler stopped")
+
+    def is_running(self) -> bool:
+        """
+        Check if the scheduler is currently running.
+
+        Returns:
+            True if the scheduler is running, False otherwise
+        """
+        return self._running
+
+    def clear_tasks(self) -> None:
+        """Clear all tasks from the scheduler."""
+        if self._running:
+            self._logger.warning("Cannot clear tasks while scheduler is running")
+            return
+        self.tasks.clear()
+        self._logger.debug("Cleared all tasks from the scheduler")

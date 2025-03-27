@@ -2,6 +2,7 @@ from .command import CommandResult as CommandResult
 from .command import run_command as run_command
 from .command import run_ssh_command as run_ssh_command
 from .concurrency.async_decorators import async_synchronized as async_synchronized
+from .concurrency.async_decorators import async_synchronized_parameter as async_synchronized_parameter
 from .concurrency.async_scheduler import AsyncScheduler as AsyncScheduler
 from .concurrency.async_task_runner import AsyncTaskRunner as AsyncTaskRunner
 from .concurrency.sync_decorators import synchronized as synchronized
