@@ -67,6 +67,9 @@ class AsyncTaskRunner:
         self._task_ids.add(task_id)
         self._tasks.append(AsyncTaskRunner.Task(task_id, awaitable))
 
+    def _task_name(self, task_id: str) -> str:
+        return f"{self.name}-{task_id}" if self.name else task_id
+
     async def run(self) -> AsyncTaskRunner.Result:
         """
         Executes all added tasks with concurrency limited by the semaphore.
@@ -92,7 +95,7 @@ class AsyncTaskRunner:
                     exceptions[task.task_id] = e
 
         # Create asyncio tasks for all runner tasks
-        tasks = [asyncio.create_task(run_task(task)) for task in self._tasks]
+        tasks = [asyncio.create_task(run_task(task), name=self._task_name(task.task_id)) for task in self._tasks]
 
         try:
             if self.timeout is not None:

@@ -4,7 +4,7 @@ import pytest
 
 from mm_std import AsyncTaskRunner
 
-pytestmark = pytest.mark.asyncio
+pytestmark = pytest.mark.anyio
 
 
 async def test_basic_execution():

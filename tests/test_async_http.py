@@ -8,7 +8,7 @@ from werkzeug import Request, Response
 
 from mm_std import FIREFOX_USER_AGENT, hrequest_async, json_dumps
 
-pytestmark = pytest.mark.asyncio
+pytestmark = pytest.mark.anyio
 
 
 async def test_custom_user_agent(httpserver: HTTPServer):

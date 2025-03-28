@@ -4,7 +4,7 @@ import pytest
 
 from mm_std import async_synchronized, async_synchronized_parameter, utc_now
 
-pytestmark = pytest.mark.asyncio
+pytestmark = pytest.mark.anyio
 
 
 async def test_async_synchronized():
