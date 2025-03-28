@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable
 from dataclasses import dataclass
+from logging import Logger
 from typing import Any
 
 
@@ -26,17 +27,21 @@ class AsyncTaskRunner:
         task_id: str
         awaitable: Awaitable[Any]
 
-    def __init__(self, max_concurrent_tasks: int, timeout: float | None = None, name: str | None = None) -> None:
+    def __init__(
+        self, max_concurrent_tasks: int, timeout: float | None = None, name: str | None = None, logger: Logger | None = None
+    ) -> None:
         """
         :param max_concurrent_tasks: Maximum number of tasks that can run concurrently.
         :param timeout: Optional overall timeout in seconds for running all tasks.
         :param name: Optional name for the runner.
+        :param logger: Optional logger for task exceptions.
         """
         if timeout is not None and timeout <= 0:
             raise ValueError("Timeout must be positive if specified.")
         self.max_concurrent_tasks: int = max_concurrent_tasks
         self.timeout: float | None = timeout
         self.name = name
+        self.logger = logger
         self.semaphore: asyncio.Semaphore = asyncio.Semaphore(max_concurrent_tasks)
         self._tasks: list[AsyncTaskRunner.Task] = []
         self._was_run: bool = False
@@ -92,6 +97,8 @@ class AsyncTaskRunner:
                     res: Any = await task.awaitable
                     results[task.task_id] = res
                 except Exception as e:
+                    if self.logger:
+                        self.logger.exception(f"Task '{self._task_name(task.task_id)}' raised an exception")
                     exceptions[task.task_id] = e
 
         # Create asyncio tasks for all runner tasks
