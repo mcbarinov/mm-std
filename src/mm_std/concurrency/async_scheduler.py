@@ -2,14 +2,17 @@ import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from logging import Logger
 from typing import Any
+
+import structlog
 
 from mm_std.date import utc_now
 
 type AsyncFunc = Callable[..., Awaitable[object]]
 type Args = tuple[object, ...]
 type Kwargs = dict[str, object]
+
+logger = structlog.stdlib.get_logger()
 
 
 class AsyncScheduler:
@@ -34,13 +37,12 @@ class AsyncScheduler:
         last_run: datetime | None = None
         running: bool = False
 
-    def __init__(self, logger: Logger, name: str = "AsyncScheduler") -> None:
+    def __init__(self, name: str = "AsyncScheduler") -> None:
         """Initialize the async scheduler."""
         self.tasks: dict[str, AsyncScheduler.TaskInfo] = {}
         self._running: bool = False
         self._tasks: list[asyncio.Task[Any]] = []
         self._main_task: asyncio.Task[Any] | None = None
-        self._logger = logger
         self._name = name
 
     def add_task(self, task_id: str, interval: float, func: AsyncFunc, args: Args = (), kwargs: Kwargs | None = None) -> None:
@@ -81,7 +83,7 @@ class AsyncScheduler:
                     await task.func(*task.args, **task.kwargs)
                 except Exception:
                     task.error_count += 1
-                    self._logger.exception(f"Exception in task {task_id}")
+                    logger.exception("Error in task", task_id=task_id, error=task.error_count)
 
                 # Calculate elapsed time and sleep if needed
                 elapsed = (utc_now() - task.last_run).total_seconds()
@@ -93,7 +95,7 @@ class AsyncScheduler:
                         break
         finally:
             task.running = False
-            self._logger.debug(f"Task {task_id} stopped")
+            logger.debug("Finished task", task_id=task_id, elapsed=elapsed)
 
     async def _start_all_tasks(self) -> None:
         """Starts all tasks concurrently using asyncio tasks."""
@@ -108,7 +110,7 @@ class AsyncScheduler:
             while self._running:  # noqa: ASYNC110
                 await asyncio.sleep(0.1)
         except asyncio.CancelledError:
-            self._logger.debug("Main scheduler task cancelled")
+            logger.debug("Cancelled all tasks")
         finally:
             # Cancel all running tasks when we exit
             for task in self._tasks:
@@ -127,11 +129,11 @@ class AsyncScheduler:
         Creates tasks in the current event loop for each registered task.
         """
         if self._running:
-            self._logger.warning("AsyncScheduler already running")
+            logger.warning("AsyncScheduler already running")
             return
 
         self._running = True
-        self._logger.debug("Starting AsyncScheduler")
+        logger.debug("starting")
         self._main_task = asyncio.create_task(self._start_all_tasks())
 
     def stop(self) -> None:
@@ -141,16 +143,16 @@ class AsyncScheduler:
         Cancels all running tasks and waits for them to complete.
         """
         if not self._running:
-            self._logger.warning("AsyncScheduler not running")
+            logger.warning("now running")
             return
 
-        self._logger.debug("Stopping AsyncScheduler")
+        logger.debug("stopping")
         self._running = False
 
         if self._main_task and not self._main_task.done():
             self._main_task.cancel()
 
-        self._logger.debug("AsyncScheduler stopped")
+        logger.debug("stopped")
 
     def is_running(self) -> bool:
         """
@@ -164,7 +166,7 @@ class AsyncScheduler:
     def clear_tasks(self) -> None:
         """Clear all tasks from the scheduler."""
         if self._running:
-            self._logger.warning("Cannot clear tasks while scheduler is running")
+            logger.warning("Cannot clear tasks while scheduler is running")
             return
         self.tasks.clear()
-        self._logger.debug("Cleared all tasks from the scheduler")
+        logger.debug("cleared tasks")

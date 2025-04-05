@@ -29,6 +29,7 @@ from .http_ import hrequest as hrequest
 from .http_ import hrequest_async as hrequest_async
 from .json_ import CustomJSONEncoder as CustomJSONEncoder
 from .json_ import json_dumps as json_dumps
+from .log import configure_structlog as configure_structlog
 from .log import init_logger as init_logger
 from .net import check_port as check_port
 from .net import get_free_local_port as get_free_local_port

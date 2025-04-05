@@ -3,8 +3,11 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable
 from dataclasses import dataclass
-from logging import Logger
 from typing import Any
+
+import structlog
+
+logger = structlog.stdlib.get_logger()
 
 
 class AsyncTaskRunner:
@@ -28,20 +31,20 @@ class AsyncTaskRunner:
         awaitable: Awaitable[Any]
 
     def __init__(
-        self, max_concurrent_tasks: int, timeout: float | None = None, name: str | None = None, logger: Logger | None = None
+        self, max_concurrent_tasks: int, timeout: float | None = None, name: str | None = None, no_logging: bool = False
     ) -> None:
         """
         :param max_concurrent_tasks: Maximum number of tasks that can run concurrently.
         :param timeout: Optional overall timeout in seconds for running all tasks.
         :param name: Optional name for the runner.
-        :param logger: Optional logger for task exceptions.
+        :param no_logging: If True, suppresses logging for task exception.
         """
         if timeout is not None and timeout <= 0:
             raise ValueError("Timeout must be positive if specified.")
         self.max_concurrent_tasks: int = max_concurrent_tasks
         self.timeout: float | None = timeout
         self.name = name
-        self.logger = logger
+        self.no_logging = no_logging
         self.semaphore: asyncio.Semaphore = asyncio.Semaphore(max_concurrent_tasks)
         self._tasks: list[AsyncTaskRunner.Task] = []
         self._was_run: bool = False
@@ -97,8 +100,8 @@ class AsyncTaskRunner:
                     res: Any = await task.awaitable
                     results[task.task_id] = res
                 except Exception as e:
-                    if self.logger:
-                        self.logger.exception(f"Task '{self._task_name(task.task_id)}' raised an exception")
+                    if not self.no_logging:
+                        logger.exception("Task raised an exception", task_id=task.task_id)
                     exceptions[task.task_id] = e
 
         # Create asyncio tasks for all runner tasks

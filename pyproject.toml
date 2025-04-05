@@ -1,19 +1,20 @@
 [project]
 name = "mm-std"
-version = "0.3.20"
+version = "0.3.21"
 description = ""
 requires-python = ">=3.12"
 dependencies = [
     "pydash~=8.0.5",
     "python-dotenv~=1.1.0",
-    "pydantic~=2.11.0",
+    "pydantic~=2.11.2",
     "cryptography~=44.0.2",
-    "rich~=13.9.4",
+    "rich>=13.9.0",
     "tomlkit~=0.13.2",
     "requests[socks]~=2.32.3",
     "pydantic-settings>=2.8.1",
-    "aiohttp~=3.11.14",
+    "aiohttp~=3.11.16",
     "aiohttp-socks~=0.10.1",
+    "structlog>=25.2.0",
 ]
 
 [build-system]
@@ -25,7 +26,7 @@ dev-dependencies = [
     "pytest~=8.3.5",
     "pytest-xdist~=3.6.1",
     "pytest-httpserver~=1.1.2",
-    "ruff~=0.11.2",
+    "ruff~=0.11.4",
     "pip-audit~=2.8.0",
     "bandit~=1.8.3",
     "mypy~=1.15.0",
