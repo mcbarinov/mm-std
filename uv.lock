@@ -452,7 +452,7 @@ wheels = [
 
 [[package]]
 name = "mm-std"
-version = "0.3.21"
+version = "0.3.22"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
@@ -464,7 +464,6 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "requests", extra = ["socks"] },
     { name = "rich" },
-    { name = "structlog" },
     { name = "tomlkit" },
 ]
 
@@ -492,7 +491,6 @@ requires-dist = [
     { name = "python-dotenv", specifier = "~=1.1.0" },
     { name = "requests", extras = ["socks"], specifier = "~=2.32.3" },
     { name = "rich", specifier = ">=13.9.0" },
-    { name = "structlog", specifier = ">=25.2.0" },
     { name = "tomlkit", specifier = "~=0.13.2" },
 ]
 
@@ -1095,15 +1093,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/28/3f/13cacea96900bbd31bb05c6b74135f85d15564fc583802be56976c940470/stevedore-5.4.1.tar.gz", hash = "sha256:3135b5ae50fe12816ef291baff420acb727fcd356106e3e9cbfa9e5985cd6f4b", size = 513858 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f7/45/8c4ebc0c460e6ec38e62ab245ad3c7fc10b210116cea7c16d61602aa9558/stevedore-5.4.1-py3-none-any.whl", hash = "sha256:d10a31c7b86cba16c1f6e8d15416955fc797052351a56af15e608ad20811fcfe", size = 49533 },
-]
-
-[[package]]
-name = "structlog"
-version = "25.2.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/78/b8/d3670aec25747e32d54cd5258102ae0d69b9c61c79e7aa326be61a570d0d/structlog-25.2.0.tar.gz", hash = "sha256:d9f9776944207d1035b8b26072b9b140c63702fd7aa57c2f85d28ab701bd8e92", size = 1367438 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/51/eb/244741c1abf7b4092686db0798a4c43491298f40ddec4226f5c4f6b5d3eb/structlog-25.2.0-py3-none-any.whl", hash = "sha256:0fecea2e345d5d491b72f3db2e5fcd6393abfc8cd06a4851f21fcd4d1a99f437", size = 68448 },
 ]
 
 [[package]]

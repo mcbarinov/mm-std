@@ -1,10 +1,9 @@
 import asyncio
+import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
-
-import structlog
 
 from mm_std.date import utc_now
 
@@ -12,7 +11,7 @@ type AsyncFunc = Callable[..., Awaitable[object]]
 type Args = tuple[object, ...]
 type Kwargs = dict[str, object]
 
-logger = structlog.stdlib.get_logger()
+logger = logging.getLogger(__name__)
 
 
 class AsyncScheduler:
@@ -75,6 +74,7 @@ class AsyncScheduler:
         task = self.tasks[task_id]
         task.running = True
 
+        elapsed = 0.0
         try:
             while self._running:
                 task.last_run = utc_now()
@@ -83,11 +83,11 @@ class AsyncScheduler:
                     await task.func(*task.args, **task.kwargs)
                 except Exception:
                     task.error_count += 1
-                    logger.exception("Error in task", task_id=task_id, error=task.error_count)
+                    logger.exception("Error in task", extra={"task_id": task_id, "error_count": task.error_count})
 
                 # Calculate elapsed time and sleep if needed
                 elapsed = (utc_now() - task.last_run).total_seconds()
-                sleep_time = max(0, task.interval - elapsed)
+                sleep_time = max(0.0, task.interval - elapsed)
                 if sleep_time > 0:
                     try:
                         await asyncio.sleep(sleep_time)
@@ -95,7 +95,7 @@ class AsyncScheduler:
                         break
         finally:
             task.running = False
-            logger.debug("Finished task", task_id=task_id, elapsed=elapsed)
+            logger.debug("Finished task", extra={"task_id": task_id, "elapsed": elapsed})
 
     async def _start_all_tasks(self) -> None:
         """Starts all tasks concurrently using asyncio tasks."""

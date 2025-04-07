@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Awaitable
 from dataclasses import dataclass
 from typing import Any
 
-import structlog
-
-logger = structlog.stdlib.get_logger()
+logger = logging.getLogger(__name__)
 
 
 class AsyncTaskRunner:
@@ -101,7 +100,7 @@ class AsyncTaskRunner:
                     results[task.task_id] = res
                 except Exception as e:
                     if not self.no_logging:
-                        logger.exception("Task raised an exception", task_id=task.task_id)
+                        logger.exception("Task raised an exception", extra={"task_id": task.task_id})
                     exceptions[task.task_id] = e
 
         # Create asyncio tasks for all runner tasks
