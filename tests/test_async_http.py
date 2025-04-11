@@ -55,13 +55,13 @@ async def test_timeout():
 
 async def test_proxy_error():
     res = await hrequest_async("https://httpbin.org/ip", proxy="https://google.com")
-    assert res.error == "proxy_error"
+    assert res.error == "proxy"
     assert res.is_proxy_error()
 
 
 async def test_connection_error():
     res = await hrequest_async("https://httpbin222.org/ip", timeout=2)
-    assert res.error.startswith("connection_error")
+    assert res.error.startswith("connection:")
 
 
 async def test_to_ok_result(httpserver: HTTPServer):
@@ -79,7 +79,7 @@ async def test_to_error():
     res = await hrequest_async("https://httpbin222.org/ip")
     assert res.to_err_result().data["code"] == res.code
     assert res.to_err_result().is_err()
-    assert res.to_err_result().err.startswith("connection_error")
+    assert res.to_err_result().err.startswith("connection:")
     assert res.is_connection_error()
 
     res = await hrequest_async("https://httpbin222.org/ip")

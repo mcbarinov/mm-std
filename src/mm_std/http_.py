@@ -1,4 +1,3 @@
-import asyncio
 import json
 from dataclasses import asdict, dataclass, field
 from typing import Any
@@ -73,10 +72,10 @@ class HResponse:
         return self.error == "timeout"
 
     def is_proxy_error(self) -> bool:
-        return self.error == "proxy_error"
+        return self.error == "proxy"
 
     def is_connection_error(self) -> bool:
-        return self.error is not None and self.error.startswith("connection_error:")
+        return self.error is not None and self.error.startswith("connection:")
 
     def to_dict(self) -> dict[str, Any]:
         return pydash.omit(asdict(self), "_json_data")
@@ -136,9 +135,9 @@ def hrequest(
     except requests.exceptions.Timeout:
         return HResponse(error="timeout")
     except requests.exceptions.ProxyError:
-        return HResponse(error="proxy_error")
+        return HResponse(error="proxy")
     except requests.exceptions.RequestException as err:
-        return HResponse(error=f"connection_error: {err}")
+        return HResponse(error=f"connection: {err}")
     except Exception as err:
         return HResponse(error=f"exception: {err}")
 
@@ -155,7 +154,6 @@ async def hrequest_async(
     user_agent: str | None = None,
     json_params: bool = True,
     auth: tuple[str, str] | None = None,
-    verify: bool = True,
 ) -> HResponse:
     query_params: dict[str, Any] | None = None
     data: dict[str, Any] | None = None
@@ -174,52 +172,65 @@ async def hrequest_async(
         data = params
 
     try:
-        # Configure connector based on proxy type
-        if proxy:
-            # HTTP proxy will be handled in request kwargs
-            connector = ProxyConnector.from_url(proxy) if proxy.startswith("socks5://") else aiohttp.TCPConnector(ssl=verify)
+        request_kwargs: dict[str, Any] = {"headers": headers}
+        if query_params:
+            request_kwargs["params"] = query_params
+        if json_:
+            request_kwargs["json"] = json_
+        if data:
+            request_kwargs["data"] = data
+        if cookies:
+            request_kwargs["cookies"] = cookies
+        if auth and isinstance(auth, tuple) and len(auth) == 2:
+            request_kwargs["auth"] = aiohttp.BasicAuth(auth[0], auth[1])
+
+        if proxy and proxy.startswith("socks"):
+            res = await _aiohttp_socks5(url, method, proxy, request_kwargs, timeout)
         else:
-            connector = aiohttp.TCPConnector(ssl=verify)
+            res = await _aiohttp(url, method, request_kwargs, timeout=timeout, proxy=proxy)
 
-        timeout_obj = aiohttp.ClientTimeout(total=timeout)
-
-        async with aiohttp.ClientSession(connector=connector, timeout=timeout_obj, cookies=cookies) as session:
-            request_kwargs: dict[str, Any] = {"headers": headers}
-
-            if query_params:
-                request_kwargs["params"] = query_params
-            if json_:
-                request_kwargs["json"] = json_
-            if data:
-                request_kwargs["data"] = data
-
-            if auth and isinstance(auth, tuple) and len(auth) == 2:
-                request_kwargs["auth"] = aiohttp.BasicAuth(auth[0], auth[1])
-
-            # Set HTTP proxy (not needed for SOCKS5)
-            if proxy and not proxy.startswith("socks5://"):
-                request_kwargs["proxy"] = proxy
-
-            try:
-                async with await asyncio.wait_for(session.request(method, url, **request_kwargs), timeout=timeout) as response:
-                    body = await response.text()
-                    return HResponse(code=response.status, body=body, headers=dict(response.headers))
-            except TimeoutError:
-                return HResponse(error="timeout")
-            except (aiohttp.ClientProxyConnectionError, aiohttp.ClientHttpProxyError):
-                return HResponse(error="proxy_error")
-            except aiohttp.ClientConnectorError as err:
-                return HResponse(error=f"connection_error: {err}")
-            except aiohttp.ClientError as err:
-                return HResponse(error=f"connection_error: {err}")
-            except Exception as err:
-                if "couldn't connect to proxy" in str(err).lower():
-                    return HResponse(error="proxy_error")
-                return HResponse(error=f"exception: {err}")
+        return HResponse(code=res.status, body=res.body, headers=res.headers)
     except TimeoutError:
         return HResponse(error="timeout")
+    except (aiohttp.ClientProxyConnectionError, aiohttp.ClientHttpProxyError):
+        return HResponse(error="proxy")
+    except aiohttp.ClientConnectorError as err:
+        return HResponse(error=f"connection: {err}")
+    except aiohttp.ClientError as err:
+        return HResponse(error=f"error: {err}")
     except Exception as err:
+        if "couldn't connect to proxy" in str(err).lower():
+            return HResponse(error="proxy")
         return HResponse(error=f"exception: {err}")
+
+
+@dataclass
+class AioHttpResponse:
+    status: int
+    body: str
+    headers: dict[str, str]
+
+
+async def _aiohttp(
+    url: str, method: str, request_kwargs: dict[str, object], timeout: float | None = None, proxy: str | None = None
+) -> AioHttpResponse:
+    if proxy:
+        request_kwargs["proxy"] = proxy
+    client_timeout = aiohttp.ClientTimeout(total=timeout) if timeout else None
+    async with aiohttp.ClientSession(timeout=client_timeout) as session, session.request(method, url, **request_kwargs) as res:  # type: ignore[arg-type]
+        return AioHttpResponse(status=res.status, headers=dict(res.headers), body=await res.text())
+
+
+async def _aiohttp_socks5(
+    url: str, method: str, proxy: str, request_kwargs: dict[str, object], timeout: float | None = None
+) -> AioHttpResponse:
+    connector = ProxyConnector.from_url(proxy)
+    client_timeout = aiohttp.ClientTimeout(total=timeout) if timeout else None
+    async with (
+        aiohttp.ClientSession(connector=connector, timeout=client_timeout) as session,
+        session.request(method, url, **request_kwargs) as res,  # type: ignore[arg-type]
+    ):
+        return AioHttpResponse(status=res.status, headers=dict(res.headers), body=await res.text())
 
 
 def add_query_params_to_url(url: str, params: dict[str, object]) -> str:

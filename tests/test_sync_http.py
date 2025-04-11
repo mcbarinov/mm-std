@@ -52,13 +52,13 @@ def test_timeout():
 
 def test_proxy_error():
     res = hrequest("https://httpbin.org/ip", proxy="https://google.com")
-    assert res.error == "proxy_error"
+    assert res.error == "proxy"
     assert res.is_proxy_error()
 
 
 def test_connection_error():
     res = hrequest("https://httpbin222.org/ip", timeout=2)
-    assert res.error.startswith("connection_error")
+    assert res.error.startswith("connection:")
 
 
 def test_to_ok_result(httpserver: HTTPServer):
@@ -76,7 +76,7 @@ def test_to_error():
     res = hrequest("https://httpbin222.org/ip")
     assert res.to_err_result().data["code"] == res.code
     assert res.to_err_result().is_err()
-    assert res.to_err_result().err.startswith("connection_error")
+    assert res.to_err_result().err.startswith("connection:")
     assert res.is_connection_error()
 
     res = hrequest("https://httpbin222.org/ip")
