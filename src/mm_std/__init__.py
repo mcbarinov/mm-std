@@ -46,6 +46,8 @@ from .random_ import random_str_choice as random_str_choice
 from .result import Err as Err
 from .result import Ok as Ok
 from .result import Result as Result
+from .result import err as err
+from .result import ok as ok
 from .result import try_ok as try_ok
 from .str import number_with_separator as number_with_separator
 from .str import str_contains_any as str_contains_any

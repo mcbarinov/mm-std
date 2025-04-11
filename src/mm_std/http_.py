@@ -7,7 +7,6 @@ from urllib.parse import urlencode
 import aiohttp
 import pydash
 import requests
-import rich
 from aiohttp_socks import ProxyConnector
 from requests.auth import AuthBase
 
@@ -212,7 +211,6 @@ async def hrequest_async(
             except aiohttp.ClientConnectorError as err:
                 return HResponse(error=f"connection_error: {err}")
             except aiohttp.ClientError as err:
-                rich.inspect(err)
                 return HResponse(error=f"connection_error: {err}")
             except Exception as err:
                 if "couldn't connect to proxy" in str(err).lower():

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable
-from typing import Any, ClassVar, Literal, NoReturn, TypeVar, Union
+from typing import Any, ClassVar, Literal, NoReturn, TypeGuard, TypeVar, Union
 
 from pydantic_core import core_schema
 
@@ -256,6 +256,16 @@ class UnwrapError(Exception):
     @property
     def result(self) -> Result[Any]:
         return self._result
+
+
+def ok(result: Result[T]) -> TypeGuard[Ok[T]]:
+    """Used for type narrowing from `Result` to `Ok`."""
+    return isinstance(result, Ok)
+
+
+def err(result: Result[T]) -> TypeGuard[Err]:
+    """Used for type narrowing from `Result` to `Err`."""
+    return isinstance(result, Err)
 
 
 def try_ok[T](fn: Callable[..., Result[T]], *, args: tuple[object], attempts: int, delay: float = 0) -> Result[T]:
