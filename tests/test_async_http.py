@@ -54,7 +54,7 @@ async def test_timeout():
 
 
 async def test_proxy_error():
-    res = await hrequest_async("https://httpbin.org/ip", proxy="https://google.com")
+    res = await hrequest_async("https://httpbin.org/ip", proxy="http://httpbin222.org")
     assert res.error == "proxy"
     assert res.is_proxy_error()
 
