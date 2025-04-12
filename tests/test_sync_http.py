@@ -111,3 +111,8 @@ def test_add_query_params_to_url():
 
     res = add_query_params_to_url("url", {"a": 1, "b": None})
     assert res == "url?a=1"
+
+
+def test_headers_list():
+    res = hrequest("https://httpbin.org/response-headers?X-Test=value1&X-Test=value2")
+    assert res.headers["X-Test"] == "value1, value2"

@@ -106,3 +106,8 @@ async def test_http_response_content_type(httpserver: HTTPServer):
 
     res = await hrequest_async(httpserver.url_for("test2"))
     assert res.content_type == "custom/text"
+
+
+async def test_headers_list():
+    res = await hrequest_async("https://httpbin.org/response-headers?X-Test=value1&X-Test=value2")
+    assert res.headers["X-Test"] == "value1, value2"

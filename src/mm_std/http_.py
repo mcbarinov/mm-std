@@ -7,6 +7,7 @@ import aiohttp
 import pydash
 import requests
 from aiohttp_socks import ProxyConnector
+from multidict import CIMultiDictProxy
 from requests.auth import AuthBase
 
 from mm_std.result import Err, Ok, Result
@@ -218,7 +219,7 @@ async def _aiohttp(
         request_kwargs["proxy"] = proxy
     client_timeout = aiohttp.ClientTimeout(total=timeout) if timeout else None
     async with aiohttp.ClientSession(timeout=client_timeout) as session, session.request(method, url, **request_kwargs) as res:  # type: ignore[arg-type]
-        return AioHttpResponse(status=res.status, headers=dict(res.headers), body=await res.text())
+        return AioHttpResponse(status=res.status, headers=headers_dict(res.headers), body=await res.text())
 
 
 async def _aiohttp_socks5(
@@ -230,7 +231,7 @@ async def _aiohttp_socks5(
         aiohttp.ClientSession(connector=connector, timeout=client_timeout) as session,
         session.request(method, url, **request_kwargs) as res,  # type: ignore[arg-type]
     ):
-        return AioHttpResponse(status=res.status, headers=dict(res.headers), body=await res.text())
+        return AioHttpResponse(status=res.status, headers=headers_dict(res.headers), body=await res.text())
 
 
 def add_query_params_to_url(url: str, params: dict[str, object]) -> str:
@@ -242,3 +243,14 @@ def add_query_params_to_url(url: str, params: dict[str, object]) -> str:
 
 hr = hrequest
 hra = hrequest_async
+
+
+def headers_dict(headers: CIMultiDictProxy[str]) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for key in headers:
+        values = headers.getall(key)
+        if len(values) == 1:
+            result[key] = values[0]
+        else:
+            result[key] = ", ".join(values)
+    return result
