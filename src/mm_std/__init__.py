@@ -19,6 +19,9 @@ from .date import utc_now as utc_now
 from .date import utc_random as utc_random
 from .dict import replace_empty_dict_values as replace_empty_dict_values
 from .env import get_dotenv as get_dotenv
+from .http.http_request import http_request as http_request
+from .http.response import HttpError as HttpError
+from .http.response import HttpResponse as HttpResponse
 from .http_ import CHROME_USER_AGENT as CHROME_USER_AGENT
 from .http_ import FIREFOX_USER_AGENT as FIREFOX_USER_AGENT
 from .http_ import HResponse as HResponse
