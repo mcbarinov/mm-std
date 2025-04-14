@@ -13,6 +13,7 @@ from .config import BaseConfig as BaseConfig
 from .crypto import fernet_decrypt as fernet_decrypt
 from .crypto import fernet_encrypt as fernet_encrypt
 from .crypto import fernet_generate_key as fernet_generate_key
+from .data_result import DataResult as DataResult
 from .date import parse_date as parse_date
 from .date import utc_delta as utc_delta
 from .date import utc_now as utc_now
