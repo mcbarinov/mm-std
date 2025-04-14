@@ -15,16 +15,22 @@ pytestmark = pytest.mark.anyio
 async def test_json_path(httpserver: HTTPServer):
     httpserver.expect_request("/test").respond_with_json({"a": {"b": {"c": 123}}})
     res = await http_request(httpserver.url_for("/test"))
-    assert res.json("a.b.c") == 123
+    assert res.parse_json_body("a.b.c") == 123
 
 
-async def test_json_path_not_exists(httpserver: HTTPServer):
+async def test_jbody_as_json_path_not_exists(httpserver: HTTPServer):
+    httpserver.expect_request("/test").respond_with_json({"d": 1})
+    res = await http_request(httpserver.url_for("/test"))
+    assert res.parse_json_body("a.b.c") is None
+
+
+async def test_body_as_json_no_body(httpserver: HTTPServer):
     def handler(_request: Request) -> Response:
         raise RuntimeError
 
     httpserver.expect_request("/test").respond_with_handler(handler)
     res = await http_request(httpserver.url_for("/test"))
-    assert res.json("a.b.c") is None
+    assert res.parse_json_body("a.b.c", none_on_error=True) is None
 
 
 async def test_custom_user_agent(httpserver: HTTPServer):
@@ -34,26 +40,21 @@ async def test_custom_user_agent(httpserver: HTTPServer):
     httpserver.expect_request("/test").respond_with_handler(handler)
     user_agent = "moon cat"
     res = await http_request(httpserver.url_for("/test"), user_agent=user_agent)
-    assert res.json()["user-agent"] == user_agent
-
-
-async def test_json_parse_error():
-    res = await http_request("https://httpbin.org")
-    assert res.is_json_parse_error()
+    assert res.parse_json_body()["user-agent"] == user_agent
 
 
 async def test_params(httpserver: HTTPServer):
     data = {"a": 123, "b": "bla bla"}
     httpserver.expect_request("/test", query_string="a=123&b=bla+bla").respond_with_json(data)
     res = await http_request(httpserver.url_for("/test"), params=data)
-    assert res.json() == data
+    assert res.parse_json_body() == data
 
 
 async def test_post_with_params(httpserver: HTTPServer):
     data = {"a": 1}
     httpserver.expect_request("/test", query_string=urlencode(data)).respond_with_json(data)
     res = await http_request(httpserver.url_for("/test"), params=data)
-    assert res.json() == data
+    assert res.parse_json_body() == data
 
 
 async def test_timeout(httpserver: HTTPServer):
@@ -71,7 +72,7 @@ async def test_proxy_http():
     proxy_url = os.getenv("PROXY_HTTP", "")
     proxy = urlparse(proxy_url)
     res = await http_request("https://api.ipify.org?format=json", proxy=proxy_url, timeout=5)
-    assert proxy.hostname in res.json()["ip"]
+    assert proxy.hostname in res.parse_json_body()["ip"]
 
 
 async def test_proxy_socks5():
@@ -79,4 +80,4 @@ async def test_proxy_socks5():
     proxy_url = os.getenv("PROXY_SOCKS5", "")
     proxy = urlparse(proxy_url)
     res = await http_request("https://api.ipify.org?format=json", proxy=proxy_url, timeout=5)
-    assert proxy.hostname in res.json()["ip"]
+    assert proxy.hostname in res.parse_json_body()["ip"]

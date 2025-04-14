@@ -74,7 +74,7 @@ async def _request_with_http_or_none_proxy(
         method, url, params=params, data=data, json=json, headers=headers, cookies=cookies, proxy=proxy, timeout=timeout
     ) as res:
         return HttpResponse(
-            status=res.status,
+            status_code=res.status,
             error=None,
             error_message=None,
             body=(await res.read()).decode(),
@@ -102,7 +102,7 @@ async def _request_with_socks_proxy(
         ) as res,
     ):
         return HttpResponse(
-            status=res.status,
+            status_code=res.status,
             error=None,
             error_message=None,
             body=(await res.read()).decode(),
