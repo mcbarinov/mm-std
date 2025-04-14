@@ -107,6 +107,27 @@ class TestDataResult:
         assert mapped.err == "error"
         assert mapped.is_err()
 
+    def test_map_exception(self):
+        result = DataResult(ok=5)
+
+        def raise_exception(_):
+            raise ValueError("Something went wrong")
+
+        mapped = result.map(raise_exception)
+        assert mapped.is_err()
+        assert "Error in map: Something went wrong" in mapped.err
+
+    @pytest.mark.anyio
+    async def test_map_async_exception(self):
+        result = DataResult(ok=5)
+
+        async def raise_exception(_):
+            raise ValueError("Something went wrong")
+
+        mapped = await result.map_async(raise_exception)
+        assert mapped.is_err()
+        assert "Error in map_async: Something went wrong" in mapped.err
+
     def test_repr(self):
         assert repr(DataResult(ok="success")) == "DataResult(ok='success')"
         assert repr(DataResult(err="error")) == "DataResult(err='error')"
@@ -145,3 +166,89 @@ class TestDataResult:
         # Test validation of invalid inputs
         with pytest.raises(TypeError):
             DataResult._validate("not_valid")  # noqa: SLF001
+
+    def test_and_then_success_to_success(self):
+        result = DataResult(ok=5)
+
+        def double_and_wrap(x):
+            return DataResult(ok=x * 2)
+
+        chained = result.and_then(double_and_wrap)
+        assert chained.is_ok()
+        assert chained.ok == 10
+
+    def test_and_then_success_to_error(self):
+        result = DataResult(ok=5)
+
+        def fail(_):
+            return DataResult(err="Operation failed")
+
+        chained = result.and_then(fail)
+        assert chained.is_err()
+        assert chained.err == "Operation failed"
+
+    def test_and_then_error(self):
+        result = DataResult(err="Initial error", data={"context": True})
+
+        def never_called(_):
+            return DataResult(ok="This shouldn't be returned")
+
+        chained = result.and_then(never_called)
+        assert chained.is_err()
+        assert chained.err == "Initial error"
+        assert chained.data == {"context": True}
+
+    def test_and_then_exception(self):
+        result = DataResult(ok=5)
+
+        def raise_exception(_):
+            raise ValueError("Something went wrong")
+
+        chained = result.and_then(raise_exception)
+        assert chained.is_err()
+        assert "Error in and_then: Something went wrong" in chained.err
+
+    @pytest.mark.anyio
+    async def test_and_then_async_success_to_success(self):
+        result = DataResult(ok=5)
+
+        async def double_and_wrap(x):
+            return DataResult(ok=x * 2)
+
+        chained = await result.and_then_async(double_and_wrap)
+        assert chained.is_ok()
+        assert chained.ok == 10
+
+    @pytest.mark.anyio
+    async def test_and_then_async_success_to_error(self):
+        result = DataResult(ok=5)
+
+        async def fail(_):
+            return DataResult(err="Operation failed")
+
+        chained = await result.and_then_async(fail)
+        assert chained.is_err()
+        assert chained.err == "Operation failed"
+
+    @pytest.mark.anyio
+    async def test_and_then_async_error(self):
+        result = DataResult(err="Initial error", data={"context": True})
+
+        async def never_called(_):
+            return DataResult(ok="This shouldn't be returned")
+
+        chained = await result.and_then_async(never_called)
+        assert chained.is_err()
+        assert chained.err == "Initial error"
+        assert chained.data == {"context": True}
+
+    @pytest.mark.anyio
+    async def test_and_then_async_exception(self):
+        result = DataResult(ok=5)
+
+        async def raise_exception(_):
+            raise ValueError("Something went wrong")
+
+        chained = await result.and_then_async(raise_exception)
+        assert chained.is_err()
+        assert "Error in and_then_async: Something went wrong" in chained.err

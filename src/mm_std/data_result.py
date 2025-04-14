@@ -87,35 +87,85 @@ class DataResult(Generic[T]):
         """
         Transforms the success value using the provided function if this is a success result.
         If this is an error result, returns a new error result with the same error message.
+        If the function raises an exception, returns a new error result with the exception message.
 
         Args:
             fn: A function that transforms the success value from type T to type U.
 
         Returns:
-            A new DataResult with the transformed success value or the original error.
+            A new DataResult with the transformed success value or an error.
         """
         if self.is_err():
             return DataResult[U](err=self.err, data=self.data)
 
-        mapped_ok = fn(self.unwrap())
-        return DataResult[U](ok=mapped_ok, data=self.data)
+        try:
+            mapped_ok = fn(self.unwrap())
+            return DataResult[U](ok=mapped_ok, data=self.data)
+        except Exception as e:
+            return DataResult[U](err=f"Error in map: {e!s}", data={"original_data": self.data, "original_ok": self.ok})
 
     async def map_async(self, fn: Callable[[T], Awaitable[U]]) -> DataResult[U]:
         """
         Asynchronously transforms the success value using the provided async function if this is a success result.
         If this is an error result, returns a new error result with the same error message.
+        If the function raises an exception, returns a new error result with the exception message.
 
         Args:
             fn: An async function that transforms the success value from type T to type U.
 
         Returns:
-            A new DataResult with the transformed success value or the original error.
+            A new DataResult with the transformed success value or an error.
         """
         if self.is_err():
             return DataResult[U](err=self.err, data=self.data)
 
-        mapped_ok = await fn(self.unwrap())
-        return DataResult[U](ok=mapped_ok, data=self.data)
+        try:
+            mapped_ok = await fn(self.unwrap())
+            return DataResult[U](ok=mapped_ok, data=self.data)
+        except Exception as e:
+            return DataResult[U](err=f"Error in map_async: {e!s}", data={"original_data": self.data, "original_ok": self.ok})
+
+    def and_then(self, fn: Callable[[T], DataResult[U]]) -> DataResult[U]:
+        """
+        Applies the function to the success value if this is a success result.
+        If this is an error result, returns a new error result with the same error message.
+
+        Unlike map, the function must return a DataResult.
+
+        Args:
+            fn: A function that takes the success value and returns a new DataResult.
+
+        Returns:
+            The result of the function application or the original error.
+        """
+        if self.is_err():
+            return DataResult[U](err=self.err, data=self.data)
+
+        try:
+            return fn(self.unwrap())
+        except Exception as e:
+            return DataResult[U](err=f"Error in and_then: {e!s}", data={"original_data": self.data, "original_ok": self.ok})
+
+    async def and_then_async(self, fn: Callable[[T], Awaitable[DataResult[U]]]) -> DataResult[U]:
+        """
+        Asynchronously applies the function to the success value if this is a success result.
+        If this is an error result, returns a new error result with the same error message.
+
+        Unlike map_async, the function must return a DataResult.
+
+        Args:
+            fn: An async function that takes the success value and returns a new DataResult.
+
+        Returns:
+            The result of the function application or the original error.
+        """
+        if self.is_err():
+            return DataResult[U](err=self.err, data=self.data)
+
+        try:
+            return await fn(self.unwrap())
+        except Exception as e:
+            return DataResult[U](err=f"Error in and_then_async: {e!s}", data={"original_data": self.data, "original_ok": self.ok})
 
     def __repr__(self) -> str:
         """
