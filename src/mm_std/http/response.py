@@ -41,7 +41,7 @@ class HttpResponse(BaseModel):
         return self.error is not None or (self.status_code is not None and self.status_code >= 400)
 
     def to_data_result_err[T](self, error: str | None = None) -> DataResult[T]:
-        return DataResult(err=error or self.error or "error", data=self.model_dump())
+        return DataResult.err(error or self.error or "error", self.model_dump())
 
     def to_data_result_ok[T](self, result: T) -> DataResult[T]:
-        return DataResult(ok=result, data=self.model_dump())
+        return DataResult.ok(result, self.model_dump())

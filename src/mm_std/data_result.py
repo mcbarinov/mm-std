@@ -10,41 +10,33 @@ T = TypeVar("T")
 U = TypeVar("U")
 
 
+type Data = dict[str, object] | None
+
+
 class DataResult(Generic[T]):
     """
     A result wrapper that encapsulates either a successful result (`ok`) or an error message (`err`).
-    Optionally carries auxiliary `data` field regardless of success or failure.
+    Optionally carries `data` field regardless of success or failure.
     """
 
-    def __init__(
-        self,
-        ok: T | None = None,
-        err: str | None = None,
-        data: object = None,
-        ok_is_none: bool = False,  # Allow None as a valid success value
-    ) -> None:
-        # Sanity check: at least one of ok or err must be provided, unless explicitly allowed via `ok_is_none`
-        if ok is None and err is None and not ok_is_none:
-            raise ValueError("Either ok or err must be set")
-        # You can't set both ok and err unless ok_is_none is True (used to explicitly accept None as success)
-        if (ok_is_none or ok is not None) and err is not None:
-            raise ValueError("Cannot set both ok and err")
+    _ok: T | None
+    _err: str | None
+    data: Data | None
 
-        self.ok = ok
-        self.err = err
-        self.data = data
+    def __init__(self) -> None:
+        raise RuntimeError("DataResult is not intended to be instantiated directly. Use the static methods instead.")
 
     def is_ok(self) -> bool:
         """
         Returns True if the result represents a success.
         """
-        return self.err is None
+        return self._err is None
 
     def is_err(self) -> bool:
         """
         Returns True if the result represents an error.
         """
-        return self.err is not None
+        return self._err is not None
 
     def unwrap(self) -> T:
         """
@@ -52,7 +44,7 @@ class DataResult(Generic[T]):
         """
         if self.is_err():
             raise RuntimeError(f"Called `unwrap()` on an `Err` value: {self.err!r}")
-        return cast(T, self.ok)
+        return cast(T, self._ok)
 
     def unwrap_ok_or(self, default: T) -> T:
         """
@@ -66,7 +58,7 @@ class DataResult(Generic[T]):
             The success value or the default value.
         """
         if self.is_ok():
-            return cast(T, self.ok)
+            return cast(T, self._ok)
         return default
 
     def unwrap_err(self) -> str:
@@ -75,13 +67,13 @@ class DataResult(Generic[T]):
         """
         if self.is_ok():
             raise RuntimeError(f"Called `unwrap_err()` on an `Ok` value: {self.ok!r}")
-        return cast(str, self.err)
+        return cast(str, self._err)
 
     def dict(self) -> dict[str, object]:
         """
         Returns a dictionary representation of the result.
         """
-        return {"ok": self.ok, "err": self.err, "data": self.data}
+        return {"ok": self._ok, "err": self._err, "data": self.data}
 
     def map(self, fn: Callable[[T], U]) -> DataResult[U]:
         """
@@ -96,13 +88,13 @@ class DataResult(Generic[T]):
             A new DataResult with the transformed success value or an error.
         """
         if self.is_err():
-            return DataResult[U](err=self.err, data=self.data)
+            return DataResult[U].err(self.unwrap_err(), self.data)
 
         try:
             mapped_ok = fn(self.unwrap())
-            return DataResult[U](ok=mapped_ok, data=self.data)
+            return DataResult[U].ok(mapped_ok, self.data)
         except Exception as e:
-            return DataResult[U](err=f"Error in map: {e!s}", data={"original_data": self.data, "original_ok": self.ok})
+            return DataResult[U].exception(e, data={"original_data": self.data, "original_ok": self.ok})
 
     async def map_async(self, fn: Callable[[T], Awaitable[U]]) -> DataResult[U]:
         """
@@ -117,13 +109,13 @@ class DataResult(Generic[T]):
             A new DataResult with the transformed success value or an error.
         """
         if self.is_err():
-            return DataResult[U](err=self.err, data=self.data)
+            return DataResult[U].err(self.unwrap_err(), self.data)
 
         try:
             mapped_ok = await fn(self.unwrap())
-            return DataResult[U](ok=mapped_ok, data=self.data)
+            return DataResult[U].ok(mapped_ok, self.data)
         except Exception as e:
-            return DataResult[U](err=f"Error in map_async: {e!s}", data={"original_data": self.data, "original_ok": self.ok})
+            return DataResult[U].exception(e, data={"original_data": self.data, "original_ok": self.ok})
 
     def and_then(self, fn: Callable[[T], DataResult[U]]) -> DataResult[U]:
         """
@@ -139,12 +131,12 @@ class DataResult(Generic[T]):
             The result of the function application or the original error.
         """
         if self.is_err():
-            return DataResult[U](err=self.err, data=self.data)
+            return DataResult[U].err(self.unwrap_err(), self.data)
 
         try:
             return fn(self.unwrap())
         except Exception as e:
-            return DataResult[U](err=f"Error in and_then: {e!s}", data={"original_data": self.data, "original_ok": self.ok})
+            return DataResult[U].exception(e, data={"original_data": self.data, "original_ok": self.ok})
 
     async def and_then_async(self, fn: Callable[[T], Awaitable[DataResult[U]]]) -> DataResult[U]:
         """
@@ -160,18 +152,18 @@ class DataResult(Generic[T]):
             The result of the function application or the original error.
         """
         if self.is_err():
-            return DataResult[U](err=self.err, data=self.data)
+            return DataResult[U].err(self.unwrap_err(), self.data)
 
         try:
             return await fn(self.unwrap())
         except Exception as e:
-            return DataResult[U](err=f"Error in and_then_async: {e!s}", data={"original_data": self.data, "original_ok": self.ok})
+            return DataResult[U].exception(e, {"original_data": self.data, "original_ok": self.ok})
 
     def __repr__(self) -> str:
         """
         Returns the debug representation of the result.
         """
-        result = f"DataResult(ok={self.ok!r}" if self.is_ok() else f"DataResult(err={self.err!r}"
+        result = f"DataResult(ok={self._ok!r}" if self.is_ok() else f"DataResult(err={self._err!r}"
         if self.data is not None:
             result += f", data={self.data!r}"
         return result + ")"
@@ -188,7 +180,7 @@ class DataResult(Generic[T]):
         """
         if not isinstance(other, DataResult):
             return NotImplemented
-        return self.ok == other.ok and self.err == other.err and self.data == other.data
+        return self._ok == other._ok and self._err == other._err and self.data == other.data
 
     @classmethod
     def __get_pydantic_core_schema__(cls, _source_type: type[Any], _handler: GetCoreSchemaHandler) -> CoreSchema:
@@ -210,9 +202,48 @@ class DataResult(Generic[T]):
         if isinstance(v, cls):
             return v
         if isinstance(v, dict):
-            return cls(
+            return cls._create(
                 ok=v.get("ok"),
                 err=v.get("err"),
                 data=v.get("data"),
             )
         raise TypeError(f"Cannot parse value as {cls.__name__}: {v}")
+
+    @classmethod
+    def _create(cls, ok: T | None, err: str | None, data: Data) -> DataResult[T]:
+        """
+        Internal method to create a DataResult instance.
+        """
+        obj = object.__new__(cls)
+        obj._ok = ok  # noqa: SLF001
+        obj._err = err  # noqa: SLF001
+        obj.data = data
+        return obj
+
+    @staticmethod
+    def ok(value: T, data: Data = None) -> DataResult[T]:
+        """
+        Static method to create a successful DataResult.
+        """
+        return DataResult._create(ok=value, err=None, data=data)
+
+    @staticmethod
+    def err(error: str, data: Data = None) -> DataResult[T]:
+        """
+        Static method to create an error DataResult.
+        """
+        return DataResult._create(ok=None, err=error, data=data)
+
+    @staticmethod
+    def exception(err: Exception, data: Data = None) -> DataResult[T]:
+        """
+        Static method to create an error DataResult from an exception.
+        """
+        if data is None:
+            data = {}
+        key = "exception_message"
+        while key in data:
+            key += "_"
+        data[key] = str(err)
+
+        return DataResult._create(ok=None, err="exception", data=data)
