@@ -9,15 +9,13 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from mm_std.result import Err, Ok
+from mm_std.result import Result
 
 
 class CustomJSONEncoder(JSONEncoder):
     def default(self, o: object) -> object:
-        if isinstance(o, Ok):
-            return {"ok": o.ok}
-        if isinstance(o, Err):
-            return {"err": o.err}
+        if isinstance(o, Result):
+            return o.to_dict()
         if isinstance(o, Decimal):
             return str(o)
         if isinstance(o, Path):

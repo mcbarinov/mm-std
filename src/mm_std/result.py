@@ -1,281 +1,197 @@
 from __future__ import annotations
 
-import time
-from collections.abc import Callable
-from typing import Any, ClassVar, Literal, NoReturn, TypeGuard, TypeVar, Union
+from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar, cast
 
-from pydantic_core import core_schema
-
-
-class Ok[T]:
-    model_config: ClassVar[dict[str, object]] = {"arbitrary_types_allowed": True}
-    __match_args__ = ("ok",)
-
-    def __init__(self, ok: T, data: object = None) -> None:
-        self.ok = ok
-        self.data = data
-
-    def __repr__(self) -> str:
-        if self.data is None:
-            return f"Ok({self.ok!r})"
-        return f"Ok({self.ok!r}, data={self.data!r})"
-
-    def __eq__(self, other: object) -> bool:
-        return isinstance(other, Ok) and self.ok == other.ok and self.data == other.data
-
-    def __ne__(self, other: object) -> bool:
-        return not (self == other)
-
-    def __hash__(self) -> int:
-        return hash((True, self.ok, self.data))
-
-    def is_ok(self) -> Literal[True]:
-        return True
-
-    def is_err(self) -> Literal[False]:
-        return False
-
-    @property
-    def err(self) -> None:
-        return None
-
-    def expect(self, _message: str) -> T:
-        return self.ok
-
-    def expect_err(self, message: str) -> NoReturn:
-        raise UnwrapError(self, message)
-
-    def unwrap(self) -> T:
-        return self.ok
-
-    def unwrap_err(self) -> NoReturn:
-        raise UnwrapError(self, "Called `Result.unwrap_err()` on an `Ok` value")
-
-    def unwrap_or[U](self, _default: U) -> T:
-        return self.ok
-
-    def unwrap_or_else(self, _op: object) -> T:
-        return self.ok
-
-    def unwrap_or_raise(self, _e: object) -> T:
-        return self.ok
-
-    def map[U](self, op: Callable[[T], U]) -> Ok[U]:
-        return Ok(op(self.ok), data=self.data)
-
-    def map_or[U](self, _default: object, op: Callable[[T], U]) -> U:
-        return op(self.ok)
-
-    def map_or_else[U](self, _err_op: object, ok_op: Callable[[T], U]) -> U:
-        """
-        The contained result is `Ok`, so return original value mapped to
-        a new value using the passed in `op` function.
-        """
-        return ok_op(self.ok)
-
-    def map_err(self, _op: object) -> Ok[T]:
-        """
-        The contained result is `Ok`, so return `Ok` with the original value
-        """
-        return self
-
-    def and_then[U](self, op: Callable[[T], U | Result[U]]) -> Result[U]:
-        """
-        The contained result is `Ok`, so return the result of `op` with the
-        original value passed in. If return of `op` function is not Result, it will be a Ok value.
-        """
-        try:
-            res = op(self.ok)
-            if not isinstance(res, Ok | Err):
-                res = Ok(res)
-        except Exception as e:
-            res = Err(e)
-        res.data = self.data
-        return res
-
-    def or_else(self, _op: object) -> Ok[T]:
-        return self
-
-    def ok_or_err(self) -> T | str:
-        return self.ok
-
-    def ok_or_none(self) -> T | None:
-        return self.ok
-
-    @classmethod
-    def __get_pydantic_core_schema__(cls, _source_type: object, _handler: object) -> core_schema.CoreSchema:
-        return core_schema.model_schema(
-            cls,
-            core_schema.model_fields_schema(
-                {
-                    "ok": core_schema.model_field(core_schema.any_schema()),
-                    "data": core_schema.model_field(core_schema.any_schema()),
-                },
-            ),
-        )
-
-
-class Err:
-    model_config: ClassVar[dict[str, object]] = {"arbitrary_types_allowed": True}
-    __match_args__ = ("err",)
-
-    def __init__(self, err: str | Exception, data: object = None) -> None:
-        self.err = f"exception: {err}" if isinstance(err, Exception) else err
-        self.data = data
-
-    def __repr__(self) -> str:
-        if self.data is None:
-            return f"Err({self.err!r})"
-        return f"Err({self.err!r}, data={self.data!r})"
-
-    def __eq__(self, other: object) -> bool:
-        return isinstance(other, Err) and self.err == other.err and self.data == other.data
-
-    def __ne__(self, other: object) -> bool:
-        return not (self == other)
-
-    def __hash__(self) -> int:
-        return hash((False, self.err, self.data))
-
-    def is_ok(self) -> Literal[False]:
-        return False
-
-    def is_err(self) -> Literal[True]:
-        return True
-
-    @property
-    def ok(self) -> None:
-        """
-        Return `None`.
-        """
-        return None
-
-    def expect(self, message: str) -> NoReturn:
-        """
-        Raises an `UnwrapError`.
-        """
-        exc = UnwrapError(self, f"{message}: {self.err!r}")
-        if isinstance(self.err, BaseException):
-            raise exc from self.err
-        raise exc
-
-    def expect_err(self, _message: str) -> str:
-        """
-        Return the inner value
-        """
-        return self.err
-
-    def unwrap(self) -> NoReturn:
-        """
-        Raises an `UnwrapError`.
-        """
-        exc = UnwrapError(self, f"Called `Result.unwrap()` on an `Err` value: {self.err!r}")
-        if isinstance(self.err, BaseException):
-            raise exc from self.err
-        raise exc
-
-    def unwrap_err(self) -> str:
-        """
-        Return the inner value
-        """
-        return self.err
-
-    def unwrap_or[U](self, default: U) -> U:
-        """
-        Return `default`.
-        """
-        return default
-
-    def unwrap_or_else[T](self, op: Callable[[str], T]) -> T:
-        """
-        The contained result is ``Err``, so return the result of applying
-        ``op`` to the error value.
-        """
-        return op(self.err)
-
-    def unwrap_or_raise[TBE: BaseException](self, e: type[TBE]) -> NoReturn:
-        """
-        The contained result is ``Err``, so raise the exception with the value.
-        """
-        raise e(self.err)
-
-    def map(self, _op: object) -> Err:
-        """
-        Return `Err` with the same value
-        """
-        return self
-
-    def map_or[U](self, default: U, _op: object) -> U:
-        """
-        Return the default value
-        """
-        return default
-
-    def map_or_else[U](self, err_op: Callable[[str], U], _ok_op: object) -> U:
-        """
-        Return the result of the default operation
-        """
-        return err_op(self.err)
-
-    def and_then(self, _op: object) -> Err:
-        """
-        The contained result is `Err`, so return `Err` with the original value
-        """
-        return self
-
-    def ok_or_err[T](self) -> T | str:
-        return self.err
-
-    def ok_or_none[T](self) -> T | None:
-        return None
-
-    @classmethod
-    def __get_pydantic_core_schema__(cls, _source_type: object, _handler: object) -> core_schema.CoreSchema:
-        return core_schema.model_schema(
-            cls,
-            core_schema.model_fields_schema(
-                {
-                    "err": core_schema.model_field(core_schema.any_schema()),
-                    "data": core_schema.model_field(core_schema.any_schema()),
-                },
-            ),
-        )
-
+from pydantic import GetCoreSchemaHandler
+from pydantic_core import CoreSchema, core_schema
 
 T = TypeVar("T")
-Result = Union[Ok[T], Err]  # noqa: UP007
+U = TypeVar("U")
+
+type Extra = dict[str, Any] | None
 
 
-class UnwrapError(Exception):
-    _result: Result[Any]
+class Result[T]:
+    """
+    A container representing either a successful result or an error.
+    Use `Result.success()` or `Result.failure()` to create instances.
+    """
 
-    def __init__(self, result: Result[Any], message: str) -> None:
-        self._result = result
-        super().__init__(message)
+    ok: T | None  # Success value, if any
+    error: str | None  # Error message, if any
+    exception: Exception | None  # Exception, if any. It's optional.
+    extra: Extra  # Optional extra metadata
 
-    @property
-    def result(self) -> Result[Any]:
-        return self._result
+    def __init__(self) -> None:
+        raise RuntimeError("Result is not intended to be instantiated directly. Use the static methods instead.")
 
+    def is_ok(self) -> bool:
+        """
+        Returns True if the result represents success.
+        """
+        return self.error is None
 
-def ok(result: Result[T]) -> TypeGuard[Ok[T]]:
-    """Used for type narrowing from `Result` to `Ok`."""
-    return isinstance(result, Ok)
+    def is_error(self) -> bool:
+        """
+        Returns True if the result represents an error.
+        """
+        return self.error is not None
 
+    def is_exception(self) -> bool:
+        """
+        Returns True if an exception is attached to the result.
+        """
+        return self.exception is not None
 
-def err(result: Result[T]) -> TypeGuard[Err]:
-    """Used for type narrowing from `Result` to `Err`."""
-    return isinstance(result, Err)
+    def unwrap(self) -> T:
+        """
+        Returns the success value.
+        Raises RuntimeError if the result is an error.
+        """
+        if not self.is_ok():
+            raise RuntimeError(f"Called unwrap() on a failure value: {self.error}")
+        return cast(T, self.ok)
 
+    def unwrap_or(self, default: T) -> T:
+        """
+        Returns the success value if available, otherwise returns the given default.
+        """
+        if not self.is_ok():
+            return default
+        return cast(T, self.ok)
 
-def try_ok[T](fn: Callable[..., Result[T]], *, args: tuple[object], attempts: int, delay: float = 0) -> Result[T]:
-    if attempts <= 0:
-        raise ValueError("attempts must be more than zero")
-    res: Result[T] = Err("not started")
-    for _ in range(attempts):
-        res = fn(*args)
-        if res.is_ok():
-            return res
-        if delay:
-            time.sleep(delay)
-    return res
+    def unwrap_error(self) -> str:
+        """
+        Returns the error message.
+        Raises RuntimeError if the result is a success.
+        """
+        if self.is_ok():
+            raise RuntimeError("Called unwrap_error() on a success value")
+        return cast(str, self.error)
+
+    def unwrap_exception(self) -> Exception:
+        """
+        Returns the attached exception if present.
+        Raises RuntimeError if the result has no exception attached.
+        """
+        if self.exception is not None:
+            return self.exception
+        raise RuntimeError("No exception provided")
+
+    def to_dict(self) -> dict[str, object]:
+        """
+        Returns a dictionary representation of the result.
+        Note: the exception is converted to a string if present.
+        """
+        return {
+            "ok": self.ok,
+            "error": self.error,
+            "exception": str(self.exception) if self.exception else None,
+            "extra": self.extra,
+        }
+
+    def map(self, fn: Callable[[T], U]) -> Result[U]:
+        if self.is_ok():
+            try:
+                new_value = fn(cast(T, self.ok))
+                return Result.success(new_value, extra=self.extra)
+            except Exception as e:
+                return Result.failure_with_exception(e, error="map_exception", extra=self.extra)
+        return cast(Result[U], self)
+
+    async def map_async(self, fn: Callable[[T], Awaitable[U]]) -> Result[U]:
+        if self.is_ok():
+            try:
+                new_value = await fn(cast(T, self.ok))
+                return Result.success(new_value, extra=self.extra)
+            except Exception as e:
+                return Result.failure_with_exception(e, error="map_exception", extra=self.extra)
+        return cast(Result[U], self)
+
+    def and_then(self, fn: Callable[[T], Result[U]]) -> Result[U]:
+        if self.is_ok():
+            try:
+                return fn(cast(T, self.ok))
+            except Exception as e:
+                return Result.failure_with_exception(e, error="and_then_exception", extra=self.extra)
+        return cast(Result[U], self)
+
+    async def and_then_async(self, fn: Callable[[T], Awaitable[Result[U]]]) -> Result[U]:
+        if self.is_ok():
+            try:
+                return await fn(cast(T, self.ok))
+            except Exception as e:
+                return Result.failure_with_exception(e, error="and_then_exception", extra=self.extra)
+        return cast(Result[U], self)
+
+    def __repr__(self) -> str:
+        parts: list[str] = []
+        if self.ok is not None:
+            parts.append(f"ok={self.ok!r}")
+        if self.error is not None:
+            parts.append(f"error={self.error!r}")
+        if self.exception is not None:
+            parts.append(f"exception={self.exception!r}")
+        if self.extra is not None:
+            parts.append(f"extra={self.extra!r}")
+        return f"Result({', '.join(parts)})"
+
+    def __hash__(self) -> int:
+        return hash(
+            (
+                self.ok,
+                self.error,
+                self.exception,
+                frozenset(self.extra.items()) if self.extra else None,
+            )
+        )
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Result):
+            return False
+        return (
+            self.ok == other.ok and self.error == other.error and self.exception == other.exception and self.extra == other.extra
+        )
+
+    @classmethod
+    def _create(cls, ok: T | None, error: str | None, exception: Exception | None, extra: Extra) -> Result[T]:
+        obj = object.__new__(cls)
+        obj.ok = ok
+        obj.error = error
+        obj.exception = exception
+        obj.extra = extra
+        return obj
+
+    @staticmethod
+    def success(ok: T, extra: Extra = None) -> Result[T]:
+        return Result._create(ok=ok, error=None, exception=None, extra=extra)
+
+    @staticmethod
+    def failure(error: str, extra: Extra = None) -> Result[T]:
+        return Result._create(ok=None, error=error, exception=None, extra=extra)
+
+    @staticmethod
+    def failure_with_exception(exception: Exception, *, error: str = "exception", extra: Extra = None) -> Result[T]:
+        return Result._create(ok=None, error=error, exception=exception, extra=extra)
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, _source_type: type[Any], _handler: GetCoreSchemaHandler) -> CoreSchema:
+        return core_schema.no_info_after_validator_function(
+            cls._validate,
+            core_schema.any_schema(),
+            serialization=core_schema.plain_serializer_function_ser_schema(lambda x: x.to_dict()),
+        )
+
+    @classmethod
+    def _validate(cls, value: object) -> Result[Any]:
+        if isinstance(value, cls):
+            return value
+        if isinstance(value, dict):
+            return cls._create(
+                ok=value.get("ok"),
+                error=value.get("error"),
+                exception=value.get("exception"),
+                extra=value.get("extra"),
+            )
+        raise TypeError(f"Invalid value for Result: {value}")

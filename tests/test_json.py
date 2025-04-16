@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
-from mm_std import Ok, json_dumps
+from mm_std import Result, json_dumps
 
 
 class Data1(BaseModel):
@@ -24,9 +24,9 @@ class Data2:
 def test_json_dumps():
     data = {
         "data1": Data1(name="n1", price=Decimal("123.456")),
-        "data2": Ok(Data2(value=42), data=[1, 2, 3]),
+        "data2": Result.success(Data2(value=42), extra={"logs": [1, 2, 3]}),
     }
-    output = """{"data1": "name='n1' price=Decimal('123.456')", "data2": "Ok(Data2(42), data=[1, 2, 3])"}"""
+    output = """{"data1": "name='n1' price=Decimal('123.456')", "data2": "Result(ok=Data2(42), extra={'logs': [1, 2, 3]})"}"""
     assert json_dumps(data) == output
 
 

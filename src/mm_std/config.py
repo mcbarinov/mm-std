@@ -6,7 +6,7 @@ from typing import NoReturn, Self
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from .print_ import print_json, print_plain
-from .result import Err, Ok, Result
+from .result import Result
 from .zip import read_text_from_zip_archive
 
 
@@ -19,18 +19,18 @@ class BaseConfig(BaseModel):
 
     @classmethod
     def read_toml_config_or_exit[T](cls: type[T], config_path: Path, zip_password: str = "") -> T:  # noqa: PYI019 # nosec
-        res = cls.read_toml_config(config_path, zip_password)  # type: ignore[attr-defined]
-        if isinstance(res, Ok):
-            return res.unwrap()  # type: ignore[no-any-return]
+        res: Result[T] = cls.read_toml_config(config_path, zip_password)  # type:ignore[attr-defined]
+        if res.is_ok():
+            return res.unwrap()
 
-        if res.err == "validator_error":
+        if res.error == "validator_error" and res.extra:
             print_plain("config validation errors")
-            for e in res.data["errors"]:
+            for e in res.extra["errors"]:
                 loc = e["loc"]
                 field = ".".join(str(lo) for lo in loc) if len(loc) > 0 else ""
                 print_plain(f"{field} {e['msg']}")
         else:
-            print_plain(f"can't parse config file: {res.err}")
+            print_plain(f"can't parse config file: {res.error}")
 
         sys.exit(1)
 
@@ -43,8 +43,8 @@ class BaseConfig(BaseModel):
             else:
                 with config_path.open("rb") as f:
                     data = tomllib.load(f)
-            return Ok(cls(**data))
-        except ValidationError as err:
-            return Err("validator_error", data={"errors": err.errors()})
-        except Exception as err:
-            return Err(err)
+            return Result.success(cls(**data))
+        except ValidationError as e:
+            return Result.failure_with_exception(e, error="validator_error", extra={"errors": e.errors()})
+        except Exception as e:
+            return Result.failure_with_exception(e)
