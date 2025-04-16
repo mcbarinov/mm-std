@@ -72,6 +72,15 @@ class HttpResponse:
             "headers": self.headers,
         }
 
+    @property
+    def content_type(self) -> str | None:
+        if self.headers is None:
+            return None
+        for key in self.headers:
+            if key.lower() == "content-type":
+                return self.headers[key]
+        return None
+
     def __repr__(self) -> str:
         parts: list[str] = []
         if self.status_code is not None:
