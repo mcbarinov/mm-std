@@ -2,7 +2,7 @@ from typing import Any
 
 import requests
 
-from mm_std.http.response import HttpError, HttpResponse
+from mm_std.http.http_response import HttpError, HttpResponse
 
 
 def http_request_sync(

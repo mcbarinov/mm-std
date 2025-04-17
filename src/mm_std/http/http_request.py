@@ -3,7 +3,7 @@ from aiohttp.typedefs import LooseCookies, Query
 from aiohttp_socks import ProxyConnector
 from multidict import CIMultiDictProxy
 
-from mm_std.http.response import HttpError, HttpResponse
+from mm_std.http.http_response import HttpError, HttpResponse
 
 
 async def http_request(

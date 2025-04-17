@@ -79,6 +79,14 @@ class Result[T]:
             return self.exception
         raise RuntimeError("No exception provided")
 
+    def ok_or_error(self) -> T | str:
+        """
+        Returns the success value if available, otherwise returns the error message.
+        """
+        if self.is_ok():
+            return self.unwrap()
+        return self.unwrap_error()
+
     def to_dict(self) -> dict[str, object]:
         """
         Returns a dictionary representation of the result.

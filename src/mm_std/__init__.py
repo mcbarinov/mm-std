@@ -21,8 +21,8 @@ from .dict import replace_empty_dict_values as replace_empty_dict_values
 from .env import get_dotenv as get_dotenv
 from .http.http_request import http_request as http_request
 from .http.http_request_sync import http_request_sync as http_request_sync
-from .http.response import HttpError as HttpError
-from .http.response import HttpResponse as HttpResponse
+from .http.http_response import HttpError as HttpError
+from .http.http_response import HttpResponse as HttpResponse
 from .json_ import CustomJSONEncoder as CustomJSONEncoder
 from .json_ import json_dumps as json_dumps
 from .log import configure_logging as configure_logging
