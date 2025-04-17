@@ -45,6 +45,6 @@ class BaseConfig(BaseModel):
                     data = tomllib.load(f)
             return Result.success(cls(**data))
         except ValidationError as e:
-            return Result.failure_with_exception(e, error="validator_error", extra={"errors": e.errors()})
+            return Result.failure(("validator_error", e), extra={"errors": e.errors()})
         except Exception as e:
-            return Result.failure_with_exception(e)
+            return Result.failure(e)

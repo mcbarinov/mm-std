@@ -97,7 +97,7 @@ class Result[T]:
                 new_value = fn(cast(T, self.ok))
                 return Result.success(new_value, extra=self.extra)
             except Exception as e:
-                return Result.failure_with_exception(e, error="map_exception", extra=self.extra)
+                return Result.failure(("map_exception", e), extra=self.extra)
         return cast(Result[U], self)
 
     async def map_async(self, fn: Callable[[T], Awaitable[U]]) -> Result[U]:
@@ -106,7 +106,7 @@ class Result[T]:
                 new_value = await fn(cast(T, self.ok))
                 return Result.success(new_value, extra=self.extra)
             except Exception as e:
-                return Result.failure_with_exception(e, error="map_exception", extra=self.extra)
+                return Result.failure(("map_exception", e), extra=self.extra)
         return cast(Result[U], self)
 
     def and_then(self, fn: Callable[[T], Result[U]]) -> Result[U]:
@@ -114,7 +114,7 @@ class Result[T]:
             try:
                 return fn(cast(T, self.ok))
             except Exception as e:
-                return Result.failure_with_exception(e, error="and_then_exception", extra=self.extra)
+                return Result.failure(("and_then_exception", e), extra=self.extra)
         return cast(Result[U], self)
 
     async def and_then_async(self, fn: Callable[[T], Awaitable[Result[U]]]) -> Result[U]:
@@ -122,7 +122,7 @@ class Result[T]:
             try:
                 return await fn(cast(T, self.ok))
             except Exception as e:
-                return Result.failure_with_exception(e, error="and_then_exception", extra=self.extra)
+                return Result.failure(("and_then_exception", e), extra=self.extra)
         return cast(Result[U], self)
 
     def __repr__(self) -> str:
@@ -165,15 +165,43 @@ class Result[T]:
 
     @staticmethod
     def success(ok: T, extra: Extra = None) -> Result[T]:
+        """
+        Creates a successful Result instance.
+
+        Args:
+            ok: The success value to store in the Result.
+            extra: Optional extra metadata to associate with the Result.
+
+        Returns:
+            A Result instance representing success with the provided value.
+        """
         return Result._create(ok=ok, error=None, exception=None, extra=extra)
 
     @staticmethod
-    def failure(error: str, extra: Extra = None) -> Result[T]:
-        return Result._create(ok=None, error=error, exception=None, extra=extra)
+    def failure(error: str | Exception | tuple[str, Exception], extra: Extra = None) -> Result[T]:
+        """
+        Creates a Result instance representing a failure.
 
-    @staticmethod
-    def failure_with_exception(exception: Exception, *, error: str = "exception", extra: Extra = None) -> Result[T]:
-        return Result._create(ok=None, error=error, exception=exception, extra=extra)
+        Args:
+            error: The error information, which can be:
+                - A string error message
+                - An Exception object
+                - A tuple containing (error_message, exception)
+            extra: Optional extra metadata to associate with the Result.
+
+        Returns:
+            A Result instance representing failure with the provided error information.
+        """
+        if isinstance(error, tuple):
+            error_, exception = error
+        elif isinstance(error, Exception):
+            error_ = "exception"
+            exception = error
+        else:
+            error_ = error
+            exception = None
+
+        return Result._create(ok=None, error=error_, exception=exception, extra=extra)
 
     @classmethod
     def __get_pydantic_core_schema__(cls, _source_type: type[Any], _handler: GetCoreSchemaHandler) -> CoreSchema:

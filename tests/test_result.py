@@ -27,7 +27,7 @@ def test_failure_result():
 
 def test_failure_with_exception():
     exc = ValueError("boom")
-    result = Result.failure_with_exception(exception=exc)
+    result = Result.failure(exc)
     assert result.is_exception() is True
     assert result.unwrap_exception() == exc
     assert result.to_dict()["exception"] == str(exc)
