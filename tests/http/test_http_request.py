@@ -9,7 +9,7 @@ from werkzeug import Request, Response
 
 from mm_std import http_request, json_dumps
 
-pytestmark = pytest.mark.anyio
+pytestmark = pytest.mark.asyncio
 
 
 async def test_json_path(httpserver: HTTPServer):

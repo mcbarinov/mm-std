@@ -57,7 +57,7 @@ class BaseConfig(BaseModel):
             else:
                 with config_path.open("rb") as f:
                     data = tomllib.load(f)
-            model = await cls.model_validate_async(data)  # type:ignore[attr-defined]
+            model = await cls.model_validate(data)  # type:ignore[misc]
             return Result.success(model)
         except ValidationError as e:
             return Result.failure(("validator_error", e), extra={"errors": e.errors()})

@@ -3,8 +3,6 @@ from pydantic import BaseModel
 
 from mm_std import Result
 
-pytestmark = pytest.mark.anyio
-
 
 def test_success_result():
     result = Result.success(42)
@@ -60,6 +58,7 @@ def test_map_exception():
     assert isinstance(mapped.unwrap_exception(), RuntimeError)
 
 
+@pytest.mark.asyncio
 async def test_map_async_success():
     async def async_double(x: int) -> int:
         return x * 2
@@ -88,6 +87,7 @@ def test_and_then_failure():
     assert result.unwrap_error() == "fail in chain"
 
 
+@pytest.mark.asyncio
 async def test_and_then_async_success():
     async def plus_one(x: int) -> Result[int]:
         return Result.success(x + 1)

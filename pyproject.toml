@@ -1,6 +1,6 @@
 [project]
 name = "mm-std"
-version = "0.4.4"
+version = "0.4.5"
 description = ""
 requires-python = ">=3.12"
 dependencies = [
@@ -31,7 +31,7 @@ dev-dependencies = [
     "bandit~=1.8.3",
     "mypy~=1.15.0",
     "types-requests>=2.32.0.20250328",
-    "anyio>=4.9.0",
+    "pytest-asyncio~=0.26.0",
 ]
 
 [tool.mypy]
@@ -84,4 +84,4 @@ skips = ["B311"]
 
 [tool.pytest.ini_options]
 markers = ["proxy: requires access proxies"]
-
+asyncio_default_fixture_loop_scope = "function"
