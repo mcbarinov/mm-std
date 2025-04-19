@@ -1,6 +1,6 @@
 [project]
 name = "mm-std"
-version = "0.4.6"
+version = "0.4.7"
 description = ""
 requires-python = ">=3.12"
 dependencies = [

@@ -57,10 +57,10 @@ class HttpResponse:
     def is_err(self) -> bool:
         return self.error is not None or (self.status_code is not None and self.status_code >= 400)
 
-    def to_err_result[T](self, error: str | Exception | tuple[str, Exception] | None = None) -> Result[T]:
+    def to_err[T](self, error: str | Exception | tuple[str, Exception] | None = None) -> Result[T]:
         return Result.err(error or self.error or "error", extra=self.to_dict())
 
-    def to_ok_result[T](self, value: T) -> Result[T]:
+    def to_ok[T](self, value: T) -> Result[T]:
         return Result.ok(value, extra=self.to_dict())
 
     def to_dict(self) -> dict[str, Any]:
