@@ -51,10 +51,10 @@ def test_unwrap_exception():
         Result.ok(1).unwrap_exception()
 
 
-# Test ok_or_error
-def test_ok_or_error():
-    assert Result.ok("v").ok_or_error() == "v"
-    assert Result.err("err").ok_or_error() == "err"
+# Test value_or_error
+def test_value_or_error():
+    assert Result.ok("v").value_or_error() == "v"
+    assert Result.err("err").value_or_error() == "err"
 
 
 # Test to_dict

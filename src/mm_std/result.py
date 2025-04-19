@@ -79,7 +79,7 @@ class Result[T]:
             return self.exception
         raise RuntimeError("No exception provided")
 
-    def ok_or_error(self) -> T | str:
+    def value_or_error(self) -> T | str:
         """
         Returns the success value if available, otherwise returns the error message.
         """
