@@ -40,6 +40,8 @@ from .random_ import random_choice as random_choice
 from .random_ import random_decimal as random_decimal
 from .random_ import random_str_choice as random_str_choice
 from .result import Result as Result
+from .result import is_err as is_err
+from .result import is_ok as is_ok
 from .str import number_with_separator as number_with_separator
 from .str import str_contains_any as str_contains_any
 from .str import str_ends_with_any as str_ends_with_any

@@ -24,9 +24,9 @@ class Data2:
 def test_json_dumps():
     data = {
         "data1": Data1(name="n1", price=Decimal("123.456")),
-        "data2": Result.success(Data2(value=42), extra={"logs": [1, 2, 3]}),
+        "data2": Result.ok(Data2(value=42), extra={"logs": [1, 2, 3]}),
     }
-    output = """{"data1": "name='n1' price=Decimal('123.456')", "data2": "Result(ok=Data2(42), extra={'logs': [1, 2, 3]})"}"""
+    output = """{"data1": "name='n1' price=Decimal('123.456')", "data2": "Result(value=Data2(42), extra={'logs': [1, 2, 3]})"}"""
     assert json_dumps(data) == output
 
 

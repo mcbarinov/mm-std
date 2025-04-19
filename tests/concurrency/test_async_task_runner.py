@@ -4,8 +4,6 @@ import pytest
 
 from mm_std import AsyncTaskRunner
 
-pytestmark = pytest.mark.asyncio
-
 
 async def test_basic_execution():
     runner = AsyncTaskRunner(max_concurrent_tasks=2)

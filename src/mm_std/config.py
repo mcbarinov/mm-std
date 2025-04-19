@@ -42,11 +42,11 @@ class BaseConfig(BaseModel):
             else:
                 with config_path.open("rb") as f:
                     data = tomllib.load(f)
-            return Result.success(cls(**data))
+            return Result.ok(cls(**data))
         except ValidationError as e:
-            return Result.failure(("validator_error", e), extra={"errors": e.errors()})
+            return Result.err(("validator_error", e), extra={"errors": e.errors()})
         except Exception as e:
-            return Result.failure(e)
+            return Result.err(e)
 
     @classmethod
     async def read_toml_config_async(cls, config_path: Path, zip_password: str = "") -> Result[Self]:  # nosec
@@ -58,11 +58,11 @@ class BaseConfig(BaseModel):
                 with config_path.open("rb") as f:
                     data = tomllib.load(f)
             model = await cls.model_validate(data)  # type:ignore[misc]
-            return Result.success(model)
+            return Result.ok(model)
         except ValidationError as e:
-            return Result.failure(("validator_error", e), extra={"errors": e.errors()})
+            return Result.err(("validator_error", e), extra={"errors": e.errors()})
         except Exception as e:
-            return Result.failure(e)
+            return Result.err(e)
 
     @classmethod
     def _print_error_and_exit(cls, res: Result[Any]) -> NoReturn:
@@ -73,5 +73,5 @@ class BaseConfig(BaseModel):
                 field = ".".join(str(lo) for lo in loc) if len(loc) > 0 else ""
                 print_plain(f"{field} {e['msg']}")
         else:
-            print_plain(f"can't parse config file: {res.error}")
+            print_plain(f"can't parse config file: {res.error} {res.exception}")
         sys.exit(1)
