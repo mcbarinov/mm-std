@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from collections.abc import Awaitable, Callable
 from typing import Any, Protocol, TypeGuard, TypeVar, cast
 
@@ -69,6 +70,35 @@ class Result[T]:
             raise RuntimeError(error_message)
         # Return the success value if present
         return cast(T, self.value)
+
+    def unwrap_or_exit(
+        self,
+        message_prefix: str | None = None,
+        include_error: bool = True,
+        exit_code: int = 1,
+    ) -> T:
+        """
+        Returns the success value if the Result is Ok, otherwise prints an error to stderr and exits.
+
+        Args:
+            message_prefix: Optional custom prefix for the error message.
+            include_error: If True, includes the internal error message in the printed message.
+            exit_code: The exit code to use when terminating the program on error.
+
+        Returns:
+            The success value of type T.
+
+        Exits:
+            Exits the program with the specified exit code if the result is an error.
+        """
+        if self.is_ok():
+            return cast(T, self.value)
+
+        error_message = message_prefix or "Called unwrap_or_exit() on a failure value"
+        if include_error:
+            error_message = f"{error_message}: {self.error}"
+        print(error_message, file=sys.stderr)  # noqa: T201
+        sys.exit(exit_code)
 
     def unwrap_or(self, default: T) -> T:
         """
