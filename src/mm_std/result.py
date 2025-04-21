@@ -44,13 +44,30 @@ class Result[T]:
         """
         return self.exception is not None
 
-    def unwrap(self) -> T:
+    def unwrap(self, message_prefix: str | None = None, include_error: bool = True) -> T:
         """
-        Returns the success value.
-        Raises RuntimeError if the result is an error.
+        Returns the success value if the Result is Ok, otherwise raises a RuntimeError.
+
+        Args:
+            message_prefix: Optional custom prefix for the error message if the Result is an error.
+                            If not provided, a default message will be used.
+            include_error: If True, appends the internal error message from the Result to the final exception message.
+
+        Raises:
+            RuntimeError: If the Result is an error.
+
+        Returns:
+            The success value of type T.
         """
         if not self.is_ok():
-            raise RuntimeError(f"Called unwrap() on a failure value: {self.error}")
+            # Use the provided message or a default fallback
+            error_message = message_prefix or "Called unwrap() on a failure value"
+            # Optionally append the error detail
+            if include_error:
+                error_message = f"{error_message}: {self.error}"
+            # Raise with the final constructed message
+            raise RuntimeError(error_message)
+        # Return the success value if present
         return cast(T, self.value)
 
     def unwrap_or(self, default: T) -> T:
