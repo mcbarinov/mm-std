@@ -15,8 +15,12 @@ T = TypeVar("T", bound="BaseConfig")
 class BaseConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    def print_and_exit(self, exclude: set[str] | None = None) -> NoReturn:
-        print_json(self.model_dump(exclude=exclude))
+    def print_and_exit(self, exclude: set[str] | None = None, count: set[str] | None = None) -> NoReturn:
+        data = self.model_dump(exclude=exclude)
+        if count:
+            for k in count:
+                data[k] = len(data[k])
+        print_json(data)
         sys.exit(0)
 
     @classmethod
