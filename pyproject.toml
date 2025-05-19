@@ -1,13 +1,13 @@
 [project]
 name = "mm-std"
-version = "0.4.12"
+version = "0.4.13"
 description = ""
 requires-python = ">=3.12"
 dependencies = [
     "pydash~=8.0.5",
     "python-dotenv~=1.1.0",
     "pydantic~=2.11.4",
-    "cryptography~=44.0.2",
+    "cryptography~=45.0.2",
     "rich>=13.9.0",
     "tomlkit~=0.13.2",
     "requests[socks]~=2.32.3",
@@ -25,11 +25,11 @@ dev-dependencies = [
     "pytest~=8.3.5",
     "pytest-xdist~=3.6.1",
     "pytest-httpserver~=1.1.3",
-    "ruff~=0.11.7",
+    "ruff~=0.11.10",
     "pip-audit~=2.9.0",
     "bandit~=1.8.3",
     "mypy~=1.15.0",
-    "types-requests>=2.32.0.20250328",
+    "types-requests>=2.32.0.20250515",
     "pytest-asyncio~=0.26.0",
 ]
 
