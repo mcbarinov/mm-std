@@ -1,7 +1,7 @@
 from typing import Any
 
 import requests
-from requests.exceptions import ProxyError
+from requests.exceptions import InvalidSchema, MissingSchema, ProxyError
 
 from mm_std.http.http_response import HttpError, HttpResponse
 
@@ -53,9 +53,11 @@ def http_request_sync(
             body=res.text,
             headers=dict(res.headers),
         )
-    except requests.Timeout as err:
-        return HttpResponse(error=HttpError.TIMEOUT, error_message=str(err))
-    except ProxyError as err:
-        return HttpResponse(error=HttpError.PROXY, error_message=str(err))
-    except Exception as err:
-        return HttpResponse(error=HttpError.ERROR, error_message=str(err))
+    except requests.Timeout as e:
+        return HttpResponse(error=HttpError.TIMEOUT, error_message=str(e))
+    except ProxyError as e:
+        return HttpResponse(error=HttpError.PROXY, error_message=str(e))
+    except (InvalidSchema, MissingSchema) as e:
+        return HttpResponse(error=HttpError.INVALID_URL, error_message=str(e))
+    except Exception as e:
+        return HttpResponse(error=HttpError.ERROR, error_message=str(e))

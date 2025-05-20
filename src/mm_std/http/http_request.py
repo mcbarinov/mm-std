@@ -1,5 +1,5 @@
 import aiohttp
-from aiohttp import ClientHttpProxyError
+from aiohttp import ClientHttpProxyError, InvalidUrlClientError
 from aiohttp.typedefs import LooseCookies, Query
 from aiohttp_socks import ProxyConnectionError, ProxyConnector
 from multidict import CIMultiDictProxy
@@ -57,6 +57,8 @@ async def http_request(
         return HttpResponse(error=HttpError.TIMEOUT, error_message=str(err))
     except (aiohttp.ClientProxyConnectionError, ProxyConnectionError, ClientHttpProxyError) as err:
         return HttpResponse(error=HttpError.PROXY, error_message=str(err))
+    except InvalidUrlClientError as e:
+        return HttpResponse(error=HttpError.INVALID_URL, error_message=str(e))
     except Exception as err:
         return HttpResponse(error=HttpError.ERROR, error_message=str(err))
 

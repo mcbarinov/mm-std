@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from pytest_httpserver import HTTPServer
 from werkzeug import Request, Response
 
-from mm_std import http_request, json_dumps
+from mm_std import HttpError, http_request, json_dumps
 
 
 async def test_json_path(httpserver: HTTPServer):
@@ -78,3 +78,23 @@ async def test_proxy_socks5():
     proxy = urlparse(proxy_url)
     res = await http_request("https://api.ipify.org?format=json", proxy=proxy_url, timeout=5)
     assert proxy.hostname in res.parse_json_body()["ip"]
+
+
+async def test_http_request_invalid_url() -> None:
+    """Test that http_request returns INVALID_URL error for malformed URLs."""
+    response = await http_request("not-a-valid-url")
+    assert response.error == HttpError.INVALID_URL
+    assert response.error_message is not None
+    assert response.status_code is None
+    assert response.body is None
+    assert response.headers is None
+
+
+async def test_http_request_invalid_url_with_proxy() -> None:
+    """Test that http_request returns INVALID_URL error for malformed URLs even with proxy."""
+    response = await http_request("not-a-valid-url", proxy="http://proxy.example.com:8080")
+    assert response.error == HttpError.INVALID_URL
+    assert response.error_message is not None
+    assert response.status_code is None
+    assert response.body is None
+    assert response.headers is None

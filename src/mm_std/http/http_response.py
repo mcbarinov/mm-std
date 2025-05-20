@@ -15,6 +15,7 @@ from mm_std.result import Result
 class HttpError(str, enum.Enum):
     TIMEOUT = "timeout"
     PROXY = "proxy"
+    INVALID_URL = "invalid_url"
     CONNECTION = "connection"
     ERROR = "error"
 
