@@ -1,6 +1,7 @@
 from typing import Any
 
 import requests
+from requests.exceptions import ProxyError
 
 from mm_std.http.http_response import HttpError, HttpResponse
 
@@ -54,5 +55,7 @@ def http_request_sync(
         )
     except requests.Timeout as err:
         return HttpResponse(error=HttpError.TIMEOUT, error_message=str(err))
+    except ProxyError as err:
+        return HttpResponse(error=HttpError.PROXY, error_message=str(err))
     except Exception as err:
         return HttpResponse(error=HttpError.ERROR, error_message=str(err))

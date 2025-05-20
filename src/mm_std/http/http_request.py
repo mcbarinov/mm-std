@@ -1,6 +1,7 @@
 import aiohttp
+from aiohttp import ClientHttpProxyError
 from aiohttp.typedefs import LooseCookies, Query
-from aiohttp_socks import ProxyConnector
+from aiohttp_socks import ProxyConnectionError, ProxyConnector
 from multidict import CIMultiDictProxy
 
 from mm_std.http.http_response import HttpError, HttpResponse
@@ -54,6 +55,8 @@ async def http_request(
         )
     except TimeoutError as err:
         return HttpResponse(error=HttpError.TIMEOUT, error_message=str(err))
+    except (aiohttp.ClientProxyConnectionError, ProxyConnectionError, ClientHttpProxyError) as err:
+        return HttpResponse(error=HttpError.PROXY, error_message=str(err))
     except Exception as err:
         return HttpResponse(error=HttpError.ERROR, error_message=str(err))
 
