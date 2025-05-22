@@ -17,7 +17,7 @@ from .date import parse_date as parse_date
 from .date import utc_delta as utc_delta
 from .date import utc_now as utc_now
 from .date import utc_random as utc_random
-from .dict import replace_empty_dict_values as replace_empty_dict_values
+from .dict import replace_empty_dict_entries as replace_empty_dict_entries
 from .env import get_dotenv as get_dotenv
 from .http.http_request import http_request as http_request
 from .http.http_request_sync import http_request_sync as http_request_sync

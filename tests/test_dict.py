@@ -1,33 +1,87 @@
-from mm_std.dict import replace_empty_dict_values
+from collections import defaultdict
+from collections.abc import Mapping
+from typing import TypedDict
+
+import pytest
+
+from mm_std import replace_empty_dict_entries
 
 
-def test_replace_empty_dict_values():
-    # Test basic replacement
-    data = {"a": None, "b": "", "c": "value", "d": 0}
-    defaults = {"a": "default_a", "b": "default_b", "e": "default_e"}
+class SampleDict(TypedDict, total=False):
+    a: str
+    b: int
+    c: bool
+    d: str
 
-    result = replace_empty_dict_values(data, defaults)
-    assert result == {"a": "default_a", "b": "default_b", "c": "value", "d": 0}
 
-    # Test with zero_is_empty=True
-    result_with_zero = replace_empty_dict_values(data, defaults, zero_is_empty=True)
-    assert result_with_zero == {"a": "default_a", "b": "default_b", "c": "value"}
+@pytest.mark.parametrize(
+    "data,defaults,expected,flags",
+    [
+        # Replace empty string with default
+        ({"a": ""}, {"a": "x"}, {"a": "x"}, {"empty_string_is_empty": True}),
+        # Keep empty string if flag is off
+        ({"a": ""}, {"a": "X"}, {"a": ""}, {"empty_string_is_empty": False}),
+        # Replace False with default
+        ({"a": False}, {"a": True}, {"a": True}, {"false_is_empty": True}),
+        # Keep False if flag is off
+        ({"a": False}, {"a": True}, {"a": False}, {"false_is_empty": False}),
+        # Replace 0 with default
+        ({"a": 0}, {"a": 5}, {"a": 5}, {"zero_is_empty": True}),
+        # Keep 0 if flag is off
+        ({"a": 0}, {"a": 5}, {"a": 0}, {"zero_is_empty": False}),
+        # Remove empty key with no default
+        ({"a": None, "b": ""}, {"a": "x"}, {"a": "x"}, {"empty_string_is_empty": True}),
+        ({"a": "", "b": ""}, {}, {}, {"empty_string_is_empty": True}),
+        ({"a": 0, "b": False}, {}, {}, {"zero_is_empty": True, "false_is_empty": True}),
+    ],
+)
+def test_replace_empty_dict_entries_flags(
+    data: dict[str, object],
+    defaults: Mapping[str, object],
+    expected: dict[str, object],
+    flags: dict[str, bool],
+) -> None:
+    result = replace_empty_dict_entries(
+        data,
+        defaults=defaults,
+        zero_is_empty=flags.get("zero_is_empty", False),
+        false_is_empty=flags.get("false_is_empty", False),
+        empty_string_is_empty=flags.get("empty_string_is_empty", True),
+    )
+    assert dict(result) == expected
 
-    # Test with no defaults provided
-    result_no_defaults = replace_empty_dict_values(data)
-    assert result_no_defaults == {"c": "value", "d": 0}
 
-    # Test with empty data
-    assert replace_empty_dict_values({}) == {}
+def test_preserves_input_type_with_defaultdict() -> None:
+    original = defaultdict(lambda: "default", {"a": None, "b": "keep"})
+    result = replace_empty_dict_entries(original, {"a": "x"})
+    assert isinstance(result, defaultdict)
+    assert result["a"] == "x"
+    assert result["b"] == "keep"
+    assert result["zzz"] == "default"  # Check factory works
 
-    # Test with nested structures
-    nested_data = {"a": None, "b": {"x": None, "y": "value"}}
-    nested_defaults = {"a": "default_a"}
-    # Note: The function doesn't recursively process nested dictionaries
-    result_nested = replace_empty_dict_values(nested_data, nested_defaults)
-    assert result_nested == {"a": "default_a", "b": {"x": None, "y": "value"}}
 
-    # Test with false_is_empty=True
-    data = {"a": "s", "b": False}
-    assert replace_empty_dict_values(data) == {"a": "s", "b": False}
-    assert replace_empty_dict_values(data, false_is_empty=True) == {"a": "s"}
+def test_typed_dict_support() -> None:
+    original: SampleDict = {"a": "", "b": 0, "c": False}
+    defaults: SampleDict = {"a": "filled", "b": 10, "c": True}
+    result = replace_empty_dict_entries(
+        original,
+        defaults=defaults,
+        zero_is_empty=True,
+        false_is_empty=True,
+        empty_string_is_empty=True,
+    )
+    assert result == {"a": "filled", "b": 10, "c": True}
+
+
+def test_removal_behavior() -> None:
+    # Ensure keys without defaults are dropped
+    data = {"a": "", "b": None, "c": 0, "d": False}
+    defaults = {"a": "A"}  # Only 'a' has default
+    result = replace_empty_dict_entries(
+        data,
+        defaults=defaults,
+        zero_is_empty=True,
+        false_is_empty=True,
+        empty_string_is_empty=True,
+    )
+    assert result == {"a": "A"}
