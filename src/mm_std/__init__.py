@@ -10,9 +10,13 @@ from .concurrency.sync_decorators import synchronized_parameter as synchronized_
 from .concurrency.sync_scheduler import Scheduler as Scheduler
 from .concurrency.sync_task_runner import ConcurrentTasks as ConcurrentTasks
 from .config import BaseConfig as BaseConfig
-from .crypto import fernet_decrypt as fernet_decrypt
-from .crypto import fernet_encrypt as fernet_encrypt
-from .crypto import fernet_generate_key as fernet_generate_key
+from .crypto.fernet import fernet_decrypt as fernet_decrypt
+from .crypto.fernet import fernet_encrypt as fernet_encrypt
+from .crypto.fernet import fernet_generate_key as fernet_generate_key
+from .crypto.openssl import openssl_decrypt as openssl_decrypt
+from .crypto.openssl import openssl_decrypt_base64 as openssl_decrypt_base64
+from .crypto.openssl import openssl_encrypt as openssl_encrypt
+from .crypto.openssl import openssl_encrypt_base64 as openssl_encrypt_base64
 from .date import parse_date as parse_date
 from .date import utc_delta as utc_delta
 from .date import utc_now as utc_now
