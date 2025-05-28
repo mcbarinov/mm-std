@@ -1,347 +1,368 @@
-import shutil
-import subprocess
-from pathlib import Path
+import base64
 
 import pytest
 
-from mm_std import openssl_decrypt, openssl_decrypt_base64, openssl_encrypt, openssl_encrypt_base64
+from mm_std.crypto.openssl import OpensslAes256Cbc
 
 
-def test_encrypt_decrypt_roundtrip(tmp_path: Path) -> None:
-    password = "test-password"
-    plaintext_data = b"Secret message for encryption!"
+class TestOpensslAes256Cbc:
+    """Test cases for the OpensslAes256Cbc class."""
 
-    input_file = tmp_path / "input.txt"
-    encrypted_file = tmp_path / "encrypted.bin"
-    decrypted_file = tmp_path / "decrypted.txt"
+    def test_basic_encrypt_decrypt_base64(self) -> None:
+        """Test basic base64 encryption and decryption roundtrip."""
+        cipher = OpensslAes256Cbc("test_password")
+        original_data = "Hello, World!"
 
-    input_file.write_bytes(plaintext_data)
+        encrypted = cipher.encrypt_base64(original_data)
+        decrypted = cipher.decrypt_base64(encrypted)
 
-    openssl_encrypt(input_file, encrypted_file, password)
-    assert encrypted_file.exists()
-    assert encrypted_file.read_bytes() != plaintext_data  # ensure it's encrypted
+        assert decrypted == original_data
 
-    openssl_decrypt(encrypted_file, decrypted_file, password)
-    assert decrypted_file.exists()
-    assert decrypted_file.read_bytes() == plaintext_data
+    def test_basic_encrypt_decrypt_bytes(self) -> None:
+        """Test basic bytes encryption and decryption roundtrip."""
+        cipher = OpensslAes256Cbc("test_password")
+        original_data = b"Hello, World!"
 
+        encrypted = cipher.encrypt_bytes(original_data)
+        decrypted = cipher.decrypt_bytes(encrypted)
 
-def test_decrypt_invalid_format(tmp_path: Path) -> None:
-    input_file = tmp_path / "not_encrypted.bin"
-    output_file = tmp_path / "output.txt"
+        assert decrypted == original_data
 
-    input_file.write_bytes(b"This is not a valid encrypted file")
+    def test_cross_compatibility_bytes_base64(self) -> None:
+        """Test that bytes and base64 methods are compatible."""
+        cipher = OpensslAes256Cbc("test_password")
+        original_text = "Test message"
+        original_bytes = original_text.encode("utf-8")
 
-    with pytest.raises(ValueError, match="Invalid file format"):
-        openssl_decrypt(input_file, output_file, "password")
+        # Encrypt as bytes, decode via base64
+        encrypted_bytes = cipher.encrypt_bytes(original_bytes)
+        encrypted_base64 = base64.b64encode(encrypted_bytes).decode("ascii")
+        decrypted_text = cipher.decrypt_base64(encrypted_base64)
+        assert decrypted_text == original_text
 
+        # Encrypt as base64, decode via bytes
+        encrypted_base64 = cipher.encrypt_base64(original_text)
+        encrypted_bytes = base64.b64decode(encrypted_base64)
+        decrypted_bytes = cipher.decrypt_bytes(encrypted_bytes)
+        assert decrypted_bytes == original_bytes
 
-def test_decrypt_with_wrong_password(tmp_path: Path) -> None:
-    plaintext_data = b"Secret message for encryption!"
-    password = "correct-password"
-    wrong_password = "wrong-password"
+    def test_initialization_simple(self) -> None:
+        """Test simple initialization without custom parameters."""
+        cipher = OpensslAes256Cbc("test_password")
 
-    input_file = tmp_path / "plain.txt"
-    encrypted_file = tmp_path / "encrypted.bin"
-    output_file = tmp_path / "decrypted.txt"
+        # Test that it works
+        data = "Test data"
+        encrypted = cipher.encrypt_base64(data)
+        decrypted = cipher.decrypt_base64(encrypted)
+        assert decrypted == data
 
-    input_file.write_bytes(plaintext_data)
-    openssl_encrypt(input_file, encrypted_file, password)
+    def test_reuse_cipher_object(self) -> None:
+        """Test that the same cipher object can be used multiple times."""
+        cipher = OpensslAes256Cbc("test_password")
 
-    with pytest.raises(ValueError):  # likely padding error on wrong password
-        openssl_decrypt(encrypted_file, output_file, wrong_password)
+        data1 = "First message"
+        data2 = "Second message"
 
+        encrypted1 = cipher.encrypt_base64(data1)
+        encrypted2 = cipher.encrypt_base64(data2)
 
-def test_openssl_compatibility(tmp_path: Path) -> None:
-    """Test compatibility with actual OpenSSL command line tool."""
-    if not shutil.which("openssl"):
-        pytest.skip("OpenSSL command line tool not available")
+        # Should be different due to random salt
+        assert encrypted1 != encrypted2
 
-    password = "test-password"
-    plaintext_data = b"Secret message for OpenSSL compatibility test!"
-    iterations = 1_000_000  # Совместимое значение
+        # But both should decrypt correctly
+        assert cipher.decrypt_base64(encrypted1) == data1
+        assert cipher.decrypt_base64(encrypted2) == data2
 
-    input_file = tmp_path / "input.txt"
-    encrypted_by_lib = tmp_path / "encrypted_by_lib.bin"
-    encrypted_by_openssl = tmp_path / "encrypted_by_openssl.bin"
-    decrypted_by_lib = tmp_path / "decrypted_by_lib.txt"
-    decrypted_by_openssl = tmp_path / "decrypted_by_openssl.txt"
+    def test_different_cipher_objects_same_password(self) -> None:
+        """Test that different cipher objects with same password can decrypt each other's data."""
+        cipher1 = OpensslAes256Cbc("same_password")
+        cipher2 = OpensslAes256Cbc("same_password")
 
-    input_file.write_bytes(plaintext_data)
+        data = "Shared secret"
+        encrypted = cipher1.encrypt_base64(data)
+        decrypted = cipher2.decrypt_base64(encrypted)
 
-    # Encrypt with our library
-    openssl_encrypt(input_file, encrypted_by_lib, password, iterations)
+        assert decrypted == data
 
-    # Decrypt with OpenSSL command
-    subprocess.run(
+    def test_different_passwords_fail(self) -> None:
+        """Test that different passwords cannot decrypt each other's data."""
+        cipher1 = OpensslAes256Cbc("password1")
+        cipher2 = OpensslAes256Cbc("password2")
+
+        data = "Secret data"
+        encrypted = cipher1.encrypt_base64(data)
+
+        with pytest.raises(ValueError, match="Decryption failed: wrong password or corrupted data"):
+            cipher2.decrypt_base64(encrypted)
+
+    def test_unicode_data(self) -> None:
+        """Test encryption and decryption of Unicode data."""
+        cipher = OpensslAes256Cbc("unicode_password_тест")
+        original_data = "Привет, мир! 🌍 こんにちは世界"
+
+        encrypted = cipher.encrypt_base64(original_data)
+        decrypted = cipher.decrypt_base64(encrypted)
+
+        assert decrypted == original_data
+
+    def test_empty_string(self) -> None:
+        """Test encryption and decryption of empty string."""
+        cipher = OpensslAes256Cbc("test_password")
+        original_data = ""
+
+        encrypted = cipher.encrypt_base64(original_data)
+        decrypted = cipher.decrypt_base64(encrypted)
+
+        assert decrypted == original_data
+
+    def test_empty_bytes(self) -> None:
+        """Test encryption and decryption of empty bytes."""
+        cipher = OpensslAes256Cbc("test_password")
+        original_data = b""
+
+        encrypted = cipher.encrypt_bytes(original_data)
+        decrypted = cipher.decrypt_bytes(encrypted)
+
+        assert decrypted == original_data
+
+    def test_long_data_string(self) -> None:
+        """Test encryption and decryption of long string data."""
+        cipher = OpensslAes256Cbc("long_data_password")
+        original_data = "A" * 10000  # 10KB of data
+
+        encrypted = cipher.encrypt_base64(original_data)
+        decrypted = cipher.decrypt_base64(encrypted)
+
+        assert decrypted == original_data
+
+    def test_long_data_bytes(self) -> None:
+        """Test encryption and decryption of long bytes data."""
+        cipher = OpensslAes256Cbc("long_data_password")
+        original_data = b"B" * 10000  # 10KB of data
+
+        encrypted = cipher.encrypt_bytes(original_data)
+        decrypted = cipher.decrypt_bytes(encrypted)
+
+        assert decrypted == original_data
+
+    def test_multiline_data(self) -> None:
+        """Test encryption and decryption of multiline data."""
+        cipher = OpensslAes256Cbc("multiline_password")
+        original_data = """Line 1
+Line 2 with special chars: !@#$%^&*()
+Line 3 with unicode: 测试
+Line 4"""
+
+        encrypted = cipher.encrypt_base64(original_data)
+        decrypted = cipher.decrypt_base64(encrypted)
+
+        assert decrypted == original_data
+
+    def test_binary_data(self) -> None:
+        """Test encryption and decryption of binary data."""
+        cipher = OpensslAes256Cbc("binary_password")
+        # Create some binary data
+        original_data = bytes(range(256))  # All possible byte values
+
+        encrypted = cipher.encrypt_bytes(original_data)
+        decrypted = cipher.decrypt_bytes(encrypted)
+
+        assert decrypted == original_data
+
+    def test_encrypted_format_structure_bytes(self) -> None:
+        """Test that encrypted bytes have correct OpenSSL format structure."""
+        cipher = OpensslAes256Cbc("test_password")
+        data = b"Test message"
+
+        encrypted = cipher.encrypt_bytes(data)
+
+        # Should start with "Salted__" magic
+        assert encrypted[:8] == b"Salted__"
+
+        # Should have salt (8 bytes) + ciphertext
+        assert len(encrypted) >= 16  # At least magic + salt
+
+    def test_encrypted_format_structure_base64(self) -> None:
+        """Test that base64 encrypted data has correct OpenSSL format structure."""
+        cipher = OpensslAes256Cbc("test_password")
+        data = "Test message"
+
+        encrypted_base64 = cipher.encrypt_base64(data)
+
+        # Decode base64 to check binary structure
+        binary_data = base64.b64decode(encrypted_base64)
+
+        # Should start with "Salted__" magic
+        assert binary_data[:8] == b"Salted__"
+
+        # Should have salt (8 bytes) + ciphertext
+        assert len(binary_data) >= 16  # At least magic + salt
+
+    def test_invalid_base64_error(self) -> None:
+        """Test that invalid base64 data raises appropriate error."""
+        cipher = OpensslAes256Cbc("test_password")
+        invalid_base64 = "Invalid base64 with spaces and @@@ symbols"
+
+        with pytest.raises(ValueError, match="Invalid base64 format"):
+            cipher.decrypt_base64(invalid_base64)
+
+    def test_invalid_format_error_bytes(self) -> None:
+        """Test that bytes without OpenSSL magic header raise appropriate error."""
+        cipher = OpensslAes256Cbc("test_password")
+        invalid_data = b"This is not OpenSSL format"
+
+        with pytest.raises(ValueError, match="Invalid format: missing OpenSSL salt header"):
+            cipher.decrypt_bytes(invalid_data)
+
+    def test_invalid_format_error_base64(self) -> None:
+        """Test that base64 data without OpenSSL magic header raises appropriate error."""
+        cipher = OpensslAes256Cbc("test_password")
+        # Valid base64 but wrong format
+        invalid_data = "VGhpcyBpcyBub3QgT3BlblNTTCBmb3JtYXQ="  # "This is not OpenSSL format"
+
+        with pytest.raises(ValueError, match="Invalid format: missing OpenSSL salt header"):
+            cipher.decrypt_base64(invalid_data)
+
+    def test_whitespace_handling_base64(self) -> None:
+        """Test that whitespace in base64 encrypted data is handled correctly."""
+        cipher = OpensslAes256Cbc("test_password")
+        data = "Test data"
+
+        encrypted = cipher.encrypt_base64(data)
+
+        # Add whitespace and test decryption
+        encrypted_with_whitespace = f"  {encrypted}  \n\t"
+        decrypted = cipher.decrypt_base64(encrypted_with_whitespace)
+
+        assert decrypted == data
+
+    def test_same_data_different_salt(self) -> None:
+        """Test that same data with same password produces different encrypted results due to random salt."""
+        cipher = OpensslAes256Cbc("same_password")
+        data = "Secret message"
+
+        encrypted1 = cipher.encrypt_base64(data)
+        encrypted2 = cipher.encrypt_base64(data)
+
+        # Should be different due to random salt
+        assert encrypted1 != encrypted2
+
+        # But both should decrypt to the same original data
+        decrypted1 = cipher.decrypt_base64(encrypted1)
+        decrypted2 = cipher.decrypt_base64(encrypted2)
+
+        assert decrypted1 == data
+        assert decrypted2 == data
+
+    def test_corrupted_data_error(self) -> None:
+        """Test that corrupted encrypted data raises appropriate error."""
+        cipher = OpensslAes256Cbc("test_password")
+        data = "Test data"
+
+        encrypted = cipher.encrypt_base64(data)
+
+        # Corrupt the encrypted data by changing a character
+        corrupted = encrypted[:-1] + ("A" if encrypted[-1] != "A" else "B")
+
+        with pytest.raises(ValueError, match="Decryption failed: wrong password or corrupted data"):
+            cipher.decrypt_base64(corrupted)
+
+    def test_short_encrypted_data_error(self) -> None:
+        """Test that too short encrypted data raises appropriate error."""
+        cipher = OpensslAes256Cbc("test_password")
+
+        # Create data that's too short (less than header + salt)
+        short_data = b"Salted__"  # Only magic header, no salt
+
+        with pytest.raises(ValueError):  # Should raise some error due to insufficient data
+            cipher.decrypt_bytes(short_data)
+
+    @pytest.mark.parametrize(
+        "test_data",
         [
-            "openssl",
-            "enc",
-            "-d",
-            "-aes-256-cbc",
-            "-pbkdf2",
-            "-iter",
-            str(iterations),
-            "-in",
-            str(encrypted_by_lib),
-            "-out",
-            str(decrypted_by_openssl),
-            "-pass",
-            f"pass:{password}",
+            "Simple text",
+            "Text with numbers 123456",
+            "Special chars: !@#$%^&*()",
+            "Unicode: 你好世界 🌍",
+            "Mixed: Hello мир 123 🎉",
+            'JSON-like: {"key": "value", "number": 42}',
+            "XML-like: <root><item>value</item></root>",
+            "Newlines\nand\ttabs",
+            "Quotes: 'single' and \"double\"",
         ],
-        capture_output=True,
-        check=False,
     )
+    def test_various_data_types_base64(self, test_data: str) -> None:
+        """Test base64 encryption and decryption with various data types."""
+        cipher = OpensslAes256Cbc("test_password")
 
-    assert decrypted_by_openssl.read_bytes() == plaintext_data
+        encrypted = cipher.encrypt_base64(test_data)
+        decrypted = cipher.decrypt_base64(encrypted)
 
-    # Encrypt with OpenSSL command
-    subprocess.run(
+        assert decrypted == test_data
+
+    @pytest.mark.parametrize(
+        "test_data",
         [
-            "openssl",
-            "enc",
-            "-aes-256-cbc",
-            "-pbkdf2",
-            "-iter",
-            str(iterations),
-            "-in",
-            str(input_file),
-            "-out",
-            str(encrypted_by_openssl),
-            "-pass",
-            f"pass:{password}",
+            b"Simple bytes",
+            b"Binary data: \x00\x01\x02\xff",
+            bytes(range(256)),  # All possible byte values
+            b"Unicode encoded: " + "тест 🌍".encode(),
+            b"",  # Empty bytes
+            b"A" * 1000,  # Long data
         ],
-        capture_output=True,
-        check=False,
     )
+    def test_various_data_types_bytes(self, test_data: bytes) -> None:
+        """Test bytes encryption and decryption with various data types."""
+        cipher = OpensslAes256Cbc("test_password")
 
-    # Decrypt with our library
-    openssl_decrypt(encrypted_by_openssl, decrypted_by_lib, password, iterations)
-    assert decrypted_by_lib.read_bytes() == plaintext_data
+        encrypted = cipher.encrypt_bytes(test_data)
+        decrypted = cipher.decrypt_bytes(encrypted)
 
+        assert decrypted == test_data
 
-def test_invalid_iterations(tmp_path: Path) -> None:
-    """Test that zero or negative iterations raise error."""
-    input_file = tmp_path / "test.txt"
-    output_file = tmp_path / "test.enc"
-    input_file.write_bytes(b"test")
-
-    with pytest.raises(ValueError):
-        openssl_encrypt(input_file, output_file, "password", 0)
-
-
-def test_different_iterations(tmp_path: Path) -> None:
-    """Test that encrypt/decrypt work with same custom iterations."""
-    password = "test-password"
-    data = b"Test data"
-    iterations = 50000
-
-    input_file = tmp_path / "input.txt"
-    encrypted_file = tmp_path / "encrypted.bin"
-    decrypted_file = tmp_path / "decrypted.txt"
-
-    input_file.write_bytes(data)
-
-    openssl_encrypt(input_file, encrypted_file, password, iterations)
-    openssl_decrypt(encrypted_file, decrypted_file, password, iterations)
-
-    assert decrypted_file.read_bytes() == data
-
-
-def test_encrypt_decrypt_base64_roundtrip(tmp_path: Path) -> None:
-    """Test base64 encrypt/decrypt roundtrip."""
-    password = "test-password"
-    plaintext_data = b"Secret message for base64 encryption!"
-
-    input_file = tmp_path / "input.txt"
-    encrypted_file = tmp_path / "encrypted.txt"
-    decrypted_file = tmp_path / "decrypted.txt"
-
-    input_file.write_bytes(plaintext_data)
-
-    openssl_encrypt_base64(input_file, encrypted_file, password)
-    assert encrypted_file.exists()
-
-    # Check that output is base64 text
-    encrypted_content = encrypted_file.read_text()
-    assert encrypted_content.isascii()
-    assert len(encrypted_content) > 0
-
-    openssl_decrypt_base64(encrypted_file, decrypted_file, password)
-    assert decrypted_file.exists()
-    assert decrypted_file.read_bytes() == plaintext_data
-
-
-def test_base64_openssl_compatibility(tmp_path: Path) -> None:
-    """Test base64 compatibility with actual OpenSSL command line tool."""
-    if not shutil.which("openssl"):
-        pytest.skip("OpenSSL command line tool not available")
-
-    password = "test-password"
-    plaintext_data = b"Secret message for OpenSSL base64 compatibility test!"
-    iterations = 1_000_000
-
-    input_file = tmp_path / "input.txt"
-    encrypted_by_lib = tmp_path / "encrypted_by_lib.txt"
-    encrypted_by_openssl = tmp_path / "encrypted_by_openssl.txt"
-    decrypted_by_lib = tmp_path / "decrypted_by_lib.txt"
-    decrypted_by_openssl = tmp_path / "decrypted_by_openssl.txt"
-
-    input_file.write_bytes(plaintext_data)
-
-    # Encrypt with our library (base64)
-    openssl_encrypt_base64(input_file, encrypted_by_lib, password, iterations)
-
-    # Decrypt with OpenSSL command (base64)
-    result = subprocess.run(
+    @pytest.mark.parametrize(
+        "password",
         [
-            "openssl",
-            "enc",
-            "-d",
-            "-aes-256-cbc",
-            "-pbkdf2",
-            "-iter",
-            str(iterations),
-            "-base64",
-            "-in",
-            str(encrypted_by_lib),
-            "-out",
-            str(decrypted_by_openssl),
-            "-pass",
-            f"pass:{password}",
+            "simple",
+            "complex_P@ssw0rd!",
+            "unicode_пароль",
+            "very_long_password_" * 10,
+            "123456",
+            "!@#$%^&*()",
+            "",  # Empty password
+            "🔐🗝️",  # Emoji password
         ],
-        capture_output=True,
-        check=False,
     )
+    def test_various_passwords(self, password: str) -> None:
+        """Test encryption and decryption with various password types."""
+        cipher = OpensslAes256Cbc(password)
+        data = "Test data for password variations"
 
-    if result.returncode == 0:
-        assert decrypted_by_openssl.read_bytes() == plaintext_data
+        encrypted = cipher.encrypt_base64(data)
+        decrypted = cipher.decrypt_base64(encrypted)
 
-    # Encrypt with OpenSSL command (base64)
-    subprocess.run(
-        [
-            "openssl",
-            "enc",
-            "-aes-256-cbc",
-            "-pbkdf2",
-            "-iter",
-            str(iterations),
-            "-base64",
-            "-in",
-            str(input_file),
-            "-out",
-            str(encrypted_by_openssl),
-            "-pass",
-            f"pass:{password}",
-        ],
-        capture_output=True,
-        check=False,
-    )
+        assert decrypted == data
 
-    # Decrypt with our library (base64)
-    if encrypted_by_openssl.exists():
-        openssl_decrypt_base64(encrypted_by_openssl, decrypted_by_lib, password, iterations)
-        assert decrypted_by_lib.read_bytes() == plaintext_data
+    def test_large_data_performance(self) -> None:
+        """Test encryption and decryption of large data (performance test)."""
+        cipher = OpensslAes256Cbc("performance_test")
 
+        # 1MB of data
+        large_data = "X" * (1024 * 1024)
 
-def test_base64_invalid_format(tmp_path: Path) -> None:
-    """Test base64 decrypt with invalid base64 format."""
-    input_file = tmp_path / "invalid_base64.txt"
-    output_file = tmp_path / "output.txt"
+        encrypted = cipher.encrypt_base64(large_data)
+        decrypted = cipher.decrypt_base64(encrypted)
 
-    # Use characters that are definitely not valid base64
-    input_file.write_text("This is not valid base64! @#$%^&*()")
+        assert decrypted == large_data
+        assert len(encrypted) > len(large_data)  # Should be larger due to base64 encoding
 
-    with pytest.raises(ValueError, match="Invalid base64 format|Invalid file format"):
-        openssl_decrypt_base64(input_file, output_file, "password")
+    def test_constants_and_attributes(self) -> None:
+        """Test that class constants are set correctly."""
+        cipher = OpensslAes256Cbc("test")
 
-
-def test_base64_invalid_openssl_format(tmp_path: Path) -> None:
-    """Test base64 decrypt with valid base64 but invalid OpenSSL format."""
-    import base64
-
-    input_file = tmp_path / "invalid_openssl.txt"
-    output_file = tmp_path / "output.txt"
-
-    # Valid base64 but not OpenSSL format (missing Salted__ header)
-    invalid_data = base64.b64encode(b"This is valid base64 but not OpenSSL format").decode()
-    input_file.write_text(invalid_data)
-
-    with pytest.raises(ValueError, match="Invalid file format"):
-        openssl_decrypt_base64(input_file, output_file, "password")
-
-
-def test_base64_wrong_password(tmp_path: Path) -> None:
-    """Test base64 decrypt with wrong password."""
-    plaintext_data = b"Secret message for encryption!"
-    password = "correct-password"
-    wrong_password = "wrong-password"
-
-    input_file = tmp_path / "plain.txt"
-    encrypted_file = tmp_path / "encrypted.txt"
-    output_file = tmp_path / "decrypted.txt"
-
-    input_file.write_bytes(plaintext_data)
-    openssl_encrypt_base64(input_file, encrypted_file, password)
-
-    with pytest.raises(ValueError, match="Decryption failed"):
-        openssl_decrypt_base64(encrypted_file, output_file, wrong_password)
-
-
-def test_base64_invalid_iterations(tmp_path: Path) -> None:
-    """Test that base64 functions reject invalid iterations."""
-    input_file = tmp_path / "test.txt"
-    output_file = tmp_path / "test.enc"
-    input_file.write_bytes(b"test")
-
-    with pytest.raises(ValueError, match="Iteration count must be at least 1000"):
-        openssl_encrypt_base64(input_file, output_file, "password", 500)
-
-    with pytest.raises(ValueError, match="Iteration count must be at least 1000"):
-        openssl_decrypt_base64(input_file, output_file, "password", 0)
-
-
-def test_base64_different_iterations(tmp_path: Path) -> None:
-    """Test that base64 encrypt/decrypt work with same custom iterations."""
-    password = "test-password"
-    data = b"Test data for base64"
-    iterations = 50000
-
-    input_file = tmp_path / "input.txt"
-    encrypted_file = tmp_path / "encrypted.txt"
-    decrypted_file = tmp_path / "decrypted.txt"
-
-    input_file.write_bytes(data)
-
-    openssl_encrypt_base64(input_file, encrypted_file, password, iterations)
-    openssl_decrypt_base64(encrypted_file, decrypted_file, password, iterations)
-
-    assert decrypted_file.read_bytes() == data
-
-
-def test_base64_vs_binary_compatibility(tmp_path: Path) -> None:
-    """Test that base64 and binary versions produce equivalent results."""
-    password = "test-password"
-    data = b"Test data for compatibility check"
-    iterations = 100000
-
-    input_file = tmp_path / "input.txt"
-    binary_encrypted = tmp_path / "binary.enc"
-    base64_encrypted = tmp_path / "base64.txt"
-    binary_decrypted = tmp_path / "binary_dec.txt"
-    base64_decrypted = tmp_path / "base64_dec.txt"
-
-    input_file.write_bytes(data)
-
-    # Encrypt with both methods
-    openssl_encrypt(input_file, binary_encrypted, password, iterations)
-    openssl_encrypt_base64(input_file, base64_encrypted, password, iterations)
-
-    # Decrypt with both methods
-    openssl_decrypt(binary_encrypted, binary_decrypted, password, iterations)
-    openssl_decrypt_base64(base64_encrypted, base64_decrypted, password, iterations)
-
-    # Both should produce the same result
-    assert binary_decrypted.read_bytes() == data
-    assert base64_decrypted.read_bytes() == data
-    assert binary_decrypted.read_bytes() == base64_decrypted.read_bytes()
+        assert cipher.MAGIC_HEADER == b"Salted__"
+        assert cipher.SALT_SIZE == 8
+        assert cipher.KEY_SIZE == 32
+        assert cipher.IV_SIZE == 16
+        assert cipher.ITERATIONS == 1_000_000
+        assert cipher.HEADER_LEN == 8
