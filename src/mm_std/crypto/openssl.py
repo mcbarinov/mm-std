@@ -1,207 +1,113 @@
-from base64 import b64decode, b64encode
+import base64
+import secrets
+import textwrap
 from hashlib import pbkdf2_hmac
-from os import urandom
-from pathlib import Path
 
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-MAGIC = b"Salted__"
-SALT_SIZE = 8
-KEY_SIZE = 32  # for AES-256
-IV_SIZE = 16
 
-
-def openssl_encrypt(input_path: Path, output_path: Path, password: str, iterations: int = 1_000_000) -> None:
+class OpensslAes256Cbc:
     """
-    Encrypt a file using OpenSSL-compatible AES-256-CBC with PBKDF2 and output in binary format.
+    AES-256-CBC encryption/decryption compatible with OpenSSL's `enc -aes-256-cbc -pbkdf2 -iter 1000000`.
 
-    This function creates encrypted files that are fully compatible with OpenSSL command:
-    openssl enc -aes-256-cbc -pbkdf2 -iter 1000000 -salt -in message.txt -out message.enc
+    Provides both raw-byte and Base64-encoded interfaces:
+      • encrypt_bytes / decrypt_bytes: work with bytes
+      • encrypt_base64 / decrypt_base64: work with Base64 strings (with automatic line breaks for OpenSSL compatibility)
 
-    Args:
-        input_path: Path to the input file to encrypt
-        output_path: Path where the encrypted binary file will be saved
-        password: Password for encryption
-        iterations: Number of PBKDF2 iterations (minimum 1000, default 1,000,000)
+    Usage:
+        >>> cipher = OpensslAes256Cbc(password="mypassword")
+        >>> # raw bytes
+        >>> ciphertext = cipher.encrypt_bytes(b"secret")
+        >>> plaintext = cipher.decrypt_bytes(ciphertext)
+        >>> # Base64 convenience with automatic line formatting
+        >>> token = cipher.encrypt_base64("secret message")
+        >>> result = cipher.decrypt_base64(token)
+        >>> print(result)
+        secret message
 
-    Raises:
-        ValueError: If iterations < 1000
+    OpenSSL compatibility:
+        echo "secret message" |
+          openssl enc -aes-256-cbc -pbkdf2 -iter 1000000 -salt -base64 -pass pass:mypassword
 
-    Example:
-        >>> from pathlib import Path
-        >>> openssl_encrypt(Path("secret.txt"), Path("secret.enc"), "mypassword")
-
-        # Decrypt with OpenSSL:
-        # openssl enc -d -aes-256-cbc -pbkdf2 -iter 1000000 -in secret.enc -out secret_decrypted.txt -pass pass:mypassword
+        echo "U2FsdGVkX1/dGGdg6SExWgtKxvuLroWqhezy54aTt1g=" |
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 1000000 -base64 -pass pass:mypassword
     """
-    if iterations < 1000:
-        raise ValueError("Iteration count must be at least 1000 for security")
 
-    data: bytes = input_path.read_bytes()
-    salt: bytes = urandom(SALT_SIZE)
+    MAGIC_HEADER = b"Salted__"
+    SALT_SIZE = 8
+    KEY_SIZE = 32  # AES-256
+    IV_SIZE = 16  # AES block size
+    ITERATIONS = 1_000_000
+    HEADER_LEN = len(MAGIC_HEADER)
 
-    key_iv: bytes = pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations, KEY_SIZE + IV_SIZE)
-    key: bytes = key_iv[:KEY_SIZE]
-    iv: bytes = key_iv[KEY_SIZE:]
+    def __init__(self, password: str) -> None:
+        """
+        Initialize the cipher with password. Uses a fixed iteration count of 1,000,000.
 
-    padder = padding.PKCS7(algorithms.AES.block_size).padder()
-    padded_data: bytes = padder.update(data) + padder.finalize()
+        Args:
+            password: Password for encryption/decryption
+        """
+        self._password = password.encode("utf-8")
 
-    cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
-    encryptor = cipher.encryptor()
-    ciphertext: bytes = encryptor.update(padded_data) + encryptor.finalize()
+    def _derive_key_iv(self, salt: bytes) -> tuple[bytes, bytes]:
+        key_iv = pbkdf2_hmac(
+            hash_name="sha256", password=self._password, salt=salt, iterations=self.ITERATIONS, dklen=self.KEY_SIZE + self.IV_SIZE
+        )
+        return key_iv[: self.KEY_SIZE], key_iv[self.KEY_SIZE :]
 
-    output_path.write_bytes(MAGIC + salt + ciphertext)
+    def encrypt_bytes(self, plaintext: bytes) -> bytes:
+        """Encrypt raw bytes and return encrypted bytes (OpenSSL compatible)."""
+        salt = secrets.token_bytes(self.SALT_SIZE)
+        key, iv = self._derive_key_iv(salt)
 
+        padder = padding.PKCS7(algorithms.AES.block_size).padder()
+        padded = padder.update(plaintext) + padder.finalize()
 
-def openssl_decrypt(input_path: Path, output_path: Path, password: str, iterations: int = 1_000_000) -> None:
-    """
-    Decrypt a binary file created by OpenSSL-compatible AES-256-CBC with PBKDF2.
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
+        encryptor = cipher.encryptor()
+        ciphertext = encryptor.update(padded) + encryptor.finalize()
 
-    This function decrypts files that were encrypted with OpenSSL command:
-    openssl enc -aes-256-cbc -pbkdf2 -iter 1000000 -salt -in message.txt -out message.enc
+        return self.MAGIC_HEADER + salt + ciphertext
 
-    Args:
-        input_path: Path to the encrypted binary file
-        output_path: Path where the decrypted file will be saved
-        password: Password for decryption
-        iterations: Number of PBKDF2 iterations (minimum 1000, default 1,000,000)
+    def decrypt_bytes(self, encrypted: bytes) -> bytes:
+        """Decrypt raw encrypted bytes (as produced by encrypt_bytes)."""
+        if not encrypted.startswith(self.MAGIC_HEADER):
+            raise ValueError("Invalid format: missing OpenSSL salt header")
 
-    Raises:
-        ValueError: If iterations < 1000, invalid file format, or wrong password
+        salt = encrypted[self.HEADER_LEN : self.HEADER_LEN + self.SALT_SIZE]
+        ciphertext = encrypted[self.HEADER_LEN + self.SALT_SIZE :]
 
-    Example:
-        >>> from pathlib import Path
-        >>> openssl_decrypt(Path("secret.enc"), Path("secret_decrypted.txt"), "mypassword")
+        key, iv = self._derive_key_iv(salt)
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
+        decryptor = cipher.decryptor()
 
-        # Encrypt with OpenSSL:
-        # openssl enc -aes-256-cbc -pbkdf2 -iter 1000000 -salt -in secret.txt -out secret.enc -pass pass:mypassword
-    """
-    if iterations < 1000:
-        raise ValueError("Iteration count must be at least 1000 for security")
+        try:
+            padded = decryptor.update(ciphertext) + decryptor.finalize()
+        except ValueError as exc:
+            raise ValueError("Decryption failed: wrong password or corrupted data") from exc
 
-    raw: bytes = input_path.read_bytes()
-    if not raw.startswith(MAGIC):
-        raise ValueError("Invalid file format: missing OpenSSL Salted header")
+        unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
+        try:
+            data = unpadder.update(padded) + unpadder.finalize()
+        except ValueError as exc:
+            raise ValueError("Decryption failed: wrong password or corrupted data") from exc
 
-    salt: bytes = raw[8:16]
-    ciphertext: bytes = raw[16:]
+        return data
 
-    key_iv: bytes = pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations, KEY_SIZE + IV_SIZE)
-    key: bytes = key_iv[:KEY_SIZE]
-    iv: bytes = key_iv[KEY_SIZE:]
+    def encrypt_base64(self, plaintext: str) -> str:
+        """Encrypt a UTF-8 string and return Base64-encoded encrypted data with line breaks for OpenSSL compatibility."""
+        raw = self.encrypt_bytes(plaintext.encode("utf-8"))
+        b64_encoded = base64.b64encode(raw).decode("ascii")
+        return textwrap.fill(b64_encoded, width=64)
 
-    cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
-    decryptor = cipher.decryptor()
-    padded_plaintext: bytes = decryptor.update(ciphertext) + decryptor.finalize()
-
-    unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
-    try:
-        plaintext: bytes = unpadder.update(padded_plaintext) + unpadder.finalize()
-    except ValueError as e:
-        raise ValueError("Decryption failed: invalid padding or wrong password") from e
-
-    output_path.write_bytes(plaintext)
-
-
-def openssl_encrypt_base64(input_path: Path, output_path: Path, password: str, iterations: int = 1_000_000) -> None:
-    """
-    Encrypt a file using OpenSSL-compatible AES-256-CBC with PBKDF2 and output in base64 format.
-
-    This function creates encrypted files that are fully compatible with OpenSSL command:
-    openssl enc -aes-256-cbc -pbkdf2 -iter 1000000 -salt -base64 -in message.txt -out message.enc
-
-    Args:
-        input_path: Path to the input file to encrypt
-        output_path: Path where the encrypted base64 file will be saved
-        password: Password for encryption
-        iterations: Number of PBKDF2 iterations (minimum 1000, default 1,000,000)
-
-    Raises:
-        ValueError: If iterations < 1000
-
-    Example:
-        >>> from pathlib import Path
-        >>> openssl_encrypt_base64(Path("secret.txt"), Path("secret.enc"), "mypassword")
-
-        # Decrypt with OpenSSL:
-        # openssl enc -d -aes-256-cbc -pbkdf2 -iter 1000000 -base64 -in secret.enc -out secret_decrypted.txt -pass pass:mypassword
-    """
-    if iterations < 1000:
-        raise ValueError("Iteration count must be at least 1000 for security")
-
-    data: bytes = input_path.read_bytes()
-    salt: bytes = urandom(SALT_SIZE)
-
-    key_iv: bytes = pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations, KEY_SIZE + IV_SIZE)
-    key: bytes = key_iv[:KEY_SIZE]
-    iv: bytes = key_iv[KEY_SIZE:]
-
-    padder = padding.PKCS7(algorithms.AES.block_size).padder()
-    padded_data: bytes = padder.update(data) + padder.finalize()
-
-    cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
-    encryptor = cipher.encryptor()
-    ciphertext: bytes = encryptor.update(padded_data) + encryptor.finalize()
-
-    # Encode binary data to base64
-    binary_data: bytes = MAGIC + salt + ciphertext
-    base64_data: str = b64encode(binary_data).decode("ascii")
-    output_path.write_text(base64_data)
-
-
-def openssl_decrypt_base64(input_path: Path, output_path: Path, password: str, iterations: int = 1_000_000) -> None:
-    """
-    Decrypt a base64-encoded file created by OpenSSL-compatible AES-256-CBC with PBKDF2.
-
-    This function decrypts files that were encrypted with OpenSSL command:
-    openssl enc -aes-256-cbc -pbkdf2 -iter 1000000 -salt -base64 -in message.txt -out message.enc
-
-    Args:
-        input_path: Path to the encrypted base64 file
-        output_path: Path where the decrypted file will be saved
-        password: Password for decryption
-        iterations: Number of PBKDF2 iterations (minimum 1000, default 1,000,000)
-
-    Raises:
-        ValueError: If iterations < 1000, invalid file format, or wrong password
-
-    Example:
-        >>> from pathlib import Path
-        >>> openssl_decrypt_base64(Path("secret.enc"), Path("secret_decrypted.txt"), "mypassword")
-
-        # Encrypt with OpenSSL:
-        # openssl enc -aes-256-cbc -pbkdf2 -iter 1000000 -salt -base64 -in secret.txt -out secret.enc -pass pass:mypassword
-    """
-    if iterations < 1000:
-        raise ValueError("Iteration count must be at least 1000 for security")
-
-    # Decode base64 to binary data
-    try:
-        base64_data: str = input_path.read_text().strip()
-        raw: bytes = b64decode(base64_data)
-    except Exception as e:
-        raise ValueError("Invalid base64 format") from e
-
-    if not raw.startswith(MAGIC):
-        raise ValueError("Invalid file format: missing OpenSSL Salted header")
-
-    salt: bytes = raw[8:16]
-    ciphertext: bytes = raw[16:]
-
-    key_iv: bytes = pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations, KEY_SIZE + IV_SIZE)
-    key: bytes = key_iv[:KEY_SIZE]
-    iv: bytes = key_iv[KEY_SIZE:]
-
-    cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
-    decryptor = cipher.decryptor()
-    padded_plaintext: bytes = decryptor.update(ciphertext) + decryptor.finalize()
-
-    unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
-    try:
-        plaintext: bytes = unpadder.update(padded_plaintext) + unpadder.finalize()
-    except ValueError as e:
-        raise ValueError("Decryption failed: invalid padding or wrong password") from e
-
-    output_path.write_bytes(plaintext)
+    def decrypt_base64(self, b64_encoded: str) -> str:
+        """Decode Base64, decrypt bytes, and return UTF-8 string. Handles base64 with or without line breaks."""
+        try:
+            # Remove all whitespace (spaces, newlines, tabs) to handle formatted base64
+            cleaned_b64 = "".join(b64_encoded.split())
+            raw = base64.b64decode(cleaned_b64)
+        except Exception as exc:
+            raise ValueError("Invalid base64 format") from exc
+        plaintext_bytes = self.decrypt_bytes(raw)
+        return plaintext_bytes.decode("utf-8")
