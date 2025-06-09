@@ -54,7 +54,8 @@ ignore = [
     "RET503", # flake8-return: implicit-return
     "COM812", # it's used in ruff formatter
     "ASYNC109",
-    "G004"
+    "G004",
+    "DTZ001"
 ]
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = ["ANN", "S"]

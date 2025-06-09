@@ -95,7 +95,7 @@ class TestParseDate:
 
     def test_iso_format_with_microseconds_no_timezone(self):
         result = parse_date("2023-12-25 14:30:45.123456")
-        expected = datetime(2023, 12, 25, 14, 30, 45, 123456)  # noqa: DTZ001
+        expected = datetime(2023, 12, 25, 14, 30, 45, 123456)
         assert result == expected
 
     def test_iso_t_format_with_timezone(self):
@@ -110,7 +110,7 @@ class TestParseDate:
 
     def test_basic_format_no_timezone(self):
         result = parse_date("2023-12-25 14:30:45")
-        expected = datetime(2023, 12, 25, 14, 30, 45)  # noqa: DTZ001
+        expected = datetime(2023, 12, 25, 14, 30, 45)
         assert result == expected
 
     def test_format_with_minutes_and_timezone(self):
@@ -120,17 +120,17 @@ class TestParseDate:
 
     def test_format_with_minutes_no_timezone(self):
         result = parse_date("2023-12-25 14:30")
-        expected = datetime(2023, 12, 25, 14, 30)  # noqa: DTZ001
+        expected = datetime(2023, 12, 25, 14, 30)
         assert result == expected
 
     def test_date_only_format(self):
         result = parse_date("2023-12-25")
-        expected = datetime(2023, 12, 25)  # noqa: DTZ001
+        expected = datetime(2023, 12, 25)
         assert result == expected
 
     def test_slash_date_format(self):
         result = parse_date("2023/12/25")
-        expected = datetime(2023, 12, 25)  # noqa: DTZ001
+        expected = datetime(2023, 12, 25)
         assert result == expected
 
     def test_z_suffix_conversion(self):
@@ -145,13 +145,13 @@ class TestParseDate:
 
     def test_ignore_tz_parameter_with_timezone(self):
         result = parse_date("2023-12-25T14:30:45+02:00", ignore_tz=True)
-        expected = datetime(2023, 12, 25, 14, 30, 45)  # noqa: DTZ001
+        expected = datetime(2023, 12, 25, 14, 30, 45)
         assert result == expected
         assert result.tzinfo is None
 
     def test_ignore_tz_parameter_without_timezone(self):
         result = parse_date("2023-12-25 14:30:45", ignore_tz=True)
-        expected = datetime(2023, 12, 25, 14, 30, 45)  # noqa: DTZ001
+        expected = datetime(2023, 12, 25, 14, 30, 45)
         assert result == expected
         assert result.tzinfo is None
 

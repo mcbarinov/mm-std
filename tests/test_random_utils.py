@@ -63,12 +63,12 @@ class TestRandomDecimal:
 
 class TestRandomDatetime:
     def test_zero_offset_returns_original_time(self) -> None:
-        base_time = datetime(2025, 6, 6, 12, 0, 0)  # noqa: DTZ001
+        base_time = datetime(2025, 6, 6, 12, 0, 0)
         result = random_datetime(base_time)
         assert result == base_time
 
     def test_generates_time_within_hours_range(self) -> None:
-        base_time = datetime(2025, 6, 6, 12, 0, 0)  # noqa: DTZ001
+        base_time = datetime(2025, 6, 6, 12, 0, 0)
         max_time = base_time + timedelta(hours=5)
 
         for _ in range(50):
@@ -76,7 +76,7 @@ class TestRandomDatetime:
             assert base_time <= result <= max_time
 
     def test_generates_time_within_minutes_range(self) -> None:
-        base_time = datetime(2025, 6, 6, 12, 0, 0)  # noqa: DTZ001
+        base_time = datetime(2025, 6, 6, 12, 0, 0)
         max_time = base_time + timedelta(minutes=30)
 
         for _ in range(50):
@@ -84,7 +84,7 @@ class TestRandomDatetime:
             assert base_time <= result <= max_time
 
     def test_generates_time_within_seconds_range(self) -> None:
-        base_time = datetime(2025, 6, 6, 12, 0, 0)  # noqa: DTZ001
+        base_time = datetime(2025, 6, 6, 12, 0, 0)
         max_time = base_time + timedelta(seconds=45)
 
         for _ in range(50):
@@ -92,7 +92,7 @@ class TestRandomDatetime:
             assert base_time <= result <= max_time
 
     def test_combines_all_offset_types(self) -> None:
-        base_time = datetime(2025, 6, 6, 12, 0, 0)  # noqa: DTZ001
+        base_time = datetime(2025, 6, 6, 12, 0, 0)
         max_time = base_time + timedelta(hours=2, minutes=30, seconds=45)
 
         for _ in range(50):
@@ -100,22 +100,22 @@ class TestRandomDatetime:
             assert base_time <= result <= max_time
 
     def test_raises_error_for_negative_hours(self) -> None:
-        base_time = datetime(2025, 6, 6, 12, 0, 0)  # noqa: DTZ001
+        base_time = datetime(2025, 6, 6, 12, 0, 0)
         with pytest.raises(ValueError, match="Range values must be non-negative"):
             random_datetime(base_time, hours=-1)
 
     def test_raises_error_for_negative_minutes(self) -> None:
-        base_time = datetime(2025, 6, 6, 12, 0, 0)  # noqa: DTZ001
+        base_time = datetime(2025, 6, 6, 12, 0, 0)
         with pytest.raises(ValueError, match="Range values must be non-negative"):
             random_datetime(base_time, minutes=-1)
 
     def test_raises_error_for_negative_seconds(self) -> None:
-        base_time = datetime(2025, 6, 6, 12, 0, 0)  # noqa: DTZ001
+        base_time = datetime(2025, 6, 6, 12, 0, 0)
         with pytest.raises(ValueError, match="Range values must be non-negative"):
             random_datetime(base_time, seconds=-1)
 
     def test_works_with_microseconds_precision(self) -> None:
-        base_time = datetime(2025, 6, 6, 12, 0, 0, 123456)  # noqa: DTZ001
+        base_time = datetime(2025, 6, 6, 12, 0, 0, 123456)
 
         result = random_datetime(base_time, seconds=1)
         # Should preserve microseconds in base time when no additional offset
