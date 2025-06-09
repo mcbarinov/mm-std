@@ -8,7 +8,7 @@ A collection of Python utilities for common data manipulation tasks with strict 
 - **Dictionary Utilities**: Advanced dictionary manipulation with type preservation
 - **Date Utilities**: UTC-focused datetime operations and flexible date parsing
 - **Random Utilities**: Type-safe random generation for decimals and datetimes
-- **String Utilities**: Efficient string matching utilities for prefixes, suffixes, and substrings
+- **String Utilities**: Efficient string matching utilities for prefixes, suffixes, and substrings, plus multiline text parsing
 - **Full Type Safety**: Strict mypy compliance with comprehensive type annotations
 
 ## Quick Start
@@ -36,6 +36,40 @@ has_error = str_contains_any(log_message, ["ERROR", "CRITICAL", "FATAL"])  # Tru
 prefixes = ("admin_", "super_", "root_")
 username = "admin_john"
 is_privileged = str_starts_with_any(username, prefixes)  # True
+```
+
+Parse multiline text into cleaned lines:
+
+```python
+from mm_std import parse_lines
+
+# Basic line parsing
+text = """
+line1
+line2
+   line3
+
+line4
+"""
+lines = parse_lines(text)  # ["line1", "line2", "line3", "line4"]
+
+# Advanced parsing with options
+config_text = """
+DEBUG=true # Enable debug mode
+HOST=localhost
+PORT=8080 # Application port
+# This is a comment
+DEBUG=true # Duplicate line
+"""
+
+# Parse with all options
+parsed = parse_lines(
+    config_text,
+    lowercase=True,        # Convert to lowercase
+    remove_comments=True,  # Remove everything after '#'
+    deduplicate=True       # Remove duplicates, preserve order
+)
+# Result: ["debug=true", "host=localhost", "port=8080"]
 ```
 
 ### JSON Utilities

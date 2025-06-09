@@ -1,4 +1,4 @@
-from mm_std import str_contains_any, str_ends_with_any, str_starts_with_any
+from mm_std import parse_lines, str_contains_any, str_ends_with_any, str_starts_with_any
 
 
 class TestStrStartsWithAny:
@@ -116,3 +116,65 @@ class TestStrContainsAny:
         assert str_contains_any(text, ("world", "earth"))  # tuple
         assert str_contains_any(text, {"world", "earth"})  # set
         assert str_contains_any(text, (s for s in ["world", "earth"]))  # generator
+
+
+class TestParseLines:
+    def test_basic_parsing(self):
+        """Test basic line parsing functionality."""
+        text = "line1\nline2\nline3"
+        result = parse_lines(text)
+        assert result == ["line1", "line2", "line3"]
+
+    def test_empty_lines_and_whitespace(self):
+        """Test handling of empty lines and whitespace."""
+        text = "line1\n\n  \nline2\n   line3   \n\nline4"
+        result = parse_lines(text)
+        assert result == ["line1", "line2", "line3", "line4"]
+
+    def test_lowercase_conversion(self):
+        """Test lowercase parameter."""
+        text = "HELLO\nWorld\nTEST"
+        result = parse_lines(text, lowercase=True)
+        assert result == ["hello", "world", "test"]
+
+        # Verify original behavior without lowercase
+        result_normal = parse_lines(text)
+        assert result_normal == ["HELLO", "World", "TEST"]
+
+    def test_comment_removal(self):
+        """Test comment removal functionality."""
+        text = "line1 # comment\nline2\nline3 # another comment\n# full comment line"
+        result = parse_lines(text, remove_comments=True)
+        assert result == ["line1", "line2", "line3"]
+
+    def test_comment_removal_edge_cases(self):
+        """Test comment removal with edge cases."""
+        text = "line1#no space\n#comment only\n  # spaced comment  \nline2 # normal"
+        result = parse_lines(text, remove_comments=True)
+        assert result == ["line1", "line2"]
+
+    def test_deduplication(self):
+        """Test deduplication while preserving order."""
+        text = "line1\nline2\nline1\nline3\nline2\nline4"
+        result = parse_lines(text, deduplicate=True)
+        assert result == ["line1", "line2", "line3", "line4"]
+
+    def test_combined_options(self):
+        """Test multiple options working together."""
+        text = "HELLO # comment\nworld\nHELLO # different comment\nTEST\nworld"
+        result = parse_lines(text, lowercase=True, remove_comments=True, deduplicate=True)
+        assert result == ["hello", "world", "test"]
+
+    def test_edge_cases(self):
+        """Test edge cases with empty input and special characters."""
+        # Empty string
+        assert parse_lines("") == []
+
+        # Only whitespace
+        assert parse_lines("   \n\t\n  ") == []
+
+        # Only comments
+        assert parse_lines("# comment1\n# comment2", remove_comments=True) == []
+
+        # Single line
+        assert parse_lines("single line") == ["single line"]
