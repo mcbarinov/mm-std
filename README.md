@@ -8,9 +8,35 @@ A collection of Python utilities for common data manipulation tasks with strict 
 - **Dictionary Utilities**: Advanced dictionary manipulation with type preservation
 - **Date Utilities**: UTC-focused datetime operations and flexible date parsing
 - **Random Utilities**: Type-safe random generation for decimals and datetimes
+- **String Utilities**: Efficient string matching utilities for prefixes, suffixes, and substrings
 - **Full Type Safety**: Strict mypy compliance with comprehensive type annotations
 
 ## Quick Start
+
+### String Utilities
+
+Efficient string matching for common patterns:
+
+```python
+from mm_std import str_starts_with_any, str_ends_with_any, str_contains_any
+
+# Check URL protocols
+url = "https://example.com"
+is_web_url = str_starts_with_any(url, ["http://", "https://"])  # True
+
+# Check file extensions
+filename = "document.pdf"
+is_document = str_ends_with_any(filename, [".pdf", ".doc", ".docx"])  # True
+
+# Check log levels in messages
+log_message = "ERROR: Database connection failed"
+has_error = str_contains_any(log_message, ["ERROR", "CRITICAL", "FATAL"])  # True
+
+# All functions accept any iterable
+prefixes = ("admin_", "super_", "root_")
+username = "admin_john"
+is_privileged = str_starts_with_any(username, prefixes)  # True
+```
 
 ### JSON Utilities
 
