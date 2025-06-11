@@ -9,6 +9,7 @@ A collection of Python utilities for common data manipulation tasks with strict 
 - **Date Utilities**: UTC-focused datetime operations and flexible date parsing
 - **Random Utilities**: Type-safe random generation for decimals and datetimes
 - **String Utilities**: Efficient string matching utilities for prefixes, suffixes, and substrings, plus multiline text parsing
+- **Subprocess Utilities**: Safe shell command execution with comprehensive result handling
 - **Full Type Safety**: Strict mypy compliance with comprehensive type annotations
 
 ## Quick Start
@@ -70,6 +71,53 @@ parsed = parse_lines(
     deduplicate=True       # Remove duplicates, preserve order
 )
 # Result: ["debug=true", "host=localhost", "port=8080"]
+```
+
+### Subprocess Utilities
+
+Execute shell commands safely with comprehensive result handling:
+
+```python
+from mm_std import shell, ssh_shell, ShellResult
+
+# Execute local commands
+result = shell("ls -la /tmp")
+print(f"Exit code: {result.code}")
+print(f"Output: {result.stdout}")
+print(f"Errors: {result.stderr}")
+print(f"Combined: {result.combined_output}")
+
+# Handle command errors gracefully
+result = shell("grep 'pattern' nonexistent.txt")
+if result.code != 0:
+    print(f"Command failed: {result.stderr}")
+
+# Execute with timeout
+result = shell("long-running-command", timeout=30)
+if result.code == 255:  # TIMEOUT_EXIT_CODE
+    print("Command timed out")
+
+# Echo commands for debugging
+result = shell("echo 'Hello World'", echo_command=True)
+
+# Complex shell operations with pipes
+result = shell("ps aux | grep python | wc -l")
+python_processes = int(result.stdout.strip())
+
+# Execute commands on remote hosts via SSH
+ssh_result = ssh_shell(
+    host="server.example.com",
+    cmd="systemctl status nginx",
+    ssh_key_path="~/.ssh/id_rsa",
+    timeout=10
+)
+
+# SSH commands are automatically quoted for security
+ssh_result = ssh_shell(
+    "server.example.com",
+    "echo 'hello world; ls -la'",  # Properly escaped
+    echo_command=True
+)
 ```
 
 ### JSON Utilities
