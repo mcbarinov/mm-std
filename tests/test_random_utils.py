@@ -44,7 +44,7 @@ class TestRandomDecimal:
 
     def test_raises_error_when_from_greater_than_to(self) -> None:
         with pytest.raises(ValueError, match="from_value must be <= to_value"):
-            random_decimal(Decimal("10"), Decimal("5"))
+            random_decimal(Decimal(10), Decimal(5))
 
     def test_works_with_negative_values(self) -> None:
         from_val = Decimal("-5.5")

@@ -24,209 +24,155 @@ class Person:
     birth_date: date
 
 
+@dataclass
+class Address:
+    street: str
+    city: str
+
+
 class CustomType:
     def __init__(self, value: str) -> None:
         self.value = value
 
 
+def assert_json_serializes_to(obj, expected_json_string):
+    result = json.dumps(obj, cls=ExtendedJSONEncoder)
+    assert result == expected_json_string
+
+
+def assert_json_deserializes_to(obj, expected_dict):
+    result = json.loads(json.dumps(obj, cls=ExtendedJSONEncoder))
+    assert result == expected_dict
+
+
 class TestExtendedJSONEncoder:
-    def test_built_in_types_unchanged(self):
-        """Test that built-in JSON types work normally."""
+    def test_builtin_types_unchanged(self):
         data = {"str": "hello", "int": 42, "float": 3.14, "bool": True, "list": [1, 2], "dict": {"nested": "value"}, "null": None}
         result = json.dumps(data, cls=ExtendedJSONEncoder)
         expected = json.dumps(data)
         assert result == expected
 
-    def test_datetime_serialization(self):
-        """Test datetime serialization to ISO format."""
-        dt = datetime(2023, 6, 15, 14, 30, 45)
-        result = json.dumps(dt, cls=ExtendedJSONEncoder)
-        assert result == '"2023-06-15T14:30:45"'
+    @pytest.mark.parametrize(
+        "obj,expected",
+        [
+            (datetime(2023, 6, 15, 14, 30, 45), '"2023-06-15T14:30:45"'),
+            (date(2023, 6, 15), '"2023-06-15"'),
+            (UUID("12345678-1234-5678-1234-567812345678"), '"12345678-1234-5678-1234-567812345678"'),
+            (Decimal("123.456"), '"123.456"'),
+            (Path("/home/user/file.txt"), '"/home/user/file.txt"'),
+            (b"hello world", '"hello world"'),
+            (Color.RED, '"red"'),
+            (ValueError("Something went wrong"), '"Something went wrong"'),
+        ],
+    )
+    def test_basic_type_serialization(self, obj, expected):
+        assert_json_serializes_to(obj, expected)
 
-    def test_date_serialization(self):
-        """Test date serialization to ISO format."""
-        d = date(2023, 6, 15)
-        result = json.dumps(d, cls=ExtendedJSONEncoder)
-        assert result == '"2023-06-15"'
+    @pytest.mark.parametrize(
+        "collection,expected_sorted",
+        [
+            ({1, 2, 3}, [1, 2, 3]),
+            (frozenset({1, 2, 3}), [1, 2, 3]),
+        ],
+    )
+    def test_set_serialization(self, collection, expected_sorted):
+        result = json.loads(json.dumps(collection, cls=ExtendedJSONEncoder))
+        assert sorted(result) == expected_sorted
 
-    def test_uuid_serialization(self):
-        """Test UUID serialization to string."""
-        uuid_obj = UUID("12345678-1234-5678-1234-567812345678")
-        result = json.dumps(uuid_obj, cls=ExtendedJSONEncoder)
-        assert result == '"12345678-1234-5678-1234-567812345678"'
-
-    def test_decimal_serialization(self):
-        """Test Decimal serialization to string."""
-        decimal_obj = Decimal("123.456")
-        result = json.dumps(decimal_obj, cls=ExtendedJSONEncoder)
-        assert result == '"123.456"'
-
-    def test_path_serialization(self):
-        """Test Path serialization to string."""
-        path_obj = Path("/home/user/file.txt")
-        result = json.dumps(path_obj, cls=ExtendedJSONEncoder)
-        assert result == '"/home/user/file.txt"'
-
-    def test_set_serialization(self):
-        """Test set serialization to list."""
-        set_obj = {1, 2, 3}
-        result = json.loads(json.dumps(set_obj, cls=ExtendedJSONEncoder))
-        assert sorted(result) == [1, 2, 3]
-
-    def test_frozenset_serialization(self):
-        """Test frozenset serialization to list."""
-        frozenset_obj = frozenset({1, 2, 3})
-        result = json.loads(json.dumps(frozenset_obj, cls=ExtendedJSONEncoder))
-        assert sorted(result) == [1, 2, 3]
-
-    def test_bytes_serialization(self):
-        """Test bytes serialization using latin-1 decoding."""
-        bytes_obj = b"hello world"
-        result = json.dumps(bytes_obj, cls=ExtendedJSONEncoder)
-        assert result == '"hello world"'
-
-    def test_complex_serialization(self):
-        """Test complex number serialization to dict."""
+    def test_complex_number_serialization(self):
         complex_obj = complex(3, 4)
-        result = json.loads(json.dumps(complex_obj, cls=ExtendedJSONEncoder))
-        assert result == {"real": 3.0, "imag": 4.0}
-
-    def test_enum_serialization(self):
-        """Test enum serialization to value."""
-        result = json.dumps(Color.RED, cls=ExtendedJSONEncoder)
-        assert result == '"red"'
-
-    def test_exception_serialization(self):
-        """Test exception serialization to string."""
-        exc = ValueError("Something went wrong")
-        result = json.dumps(exc, cls=ExtendedJSONEncoder)
-        assert result == '"Something went wrong"'
+        assert_json_deserializes_to(complex_obj, {"real": 3.0, "imag": 4.0})
 
     def test_dataclass_serialization(self):
-        """Test dataclass serialization to dict."""
         person = Person("Alice", 30, date(1993, 6, 15))
-        result = json.loads(json.dumps(person, cls=ExtendedJSONEncoder))
-        assert result == {"name": "Alice", "age": 30, "birth_date": "1993-06-15"}
+        expected = {"name": "Alice", "age": 30, "birth_date": "1993-06-15"}
+        assert_json_deserializes_to(person, expected)
 
     def test_nested_dataclass_serialization(self):
-        """Test nested objects with dataclass containing special types."""
         person = Person("Bob", 25, date(1998, 12, 25))
         data = {"person": person, "uuid": UUID("12345678-1234-5678-1234-567812345678")}
-        result = json.loads(json.dumps(data, cls=ExtendedJSONEncoder))
-
         expected = {
             "person": {"name": "Bob", "age": 25, "birth_date": "1998-12-25"},
             "uuid": "12345678-1234-5678-1234-567812345678",
         }
-        assert result == expected
+        assert_json_deserializes_to(data, expected)
 
 
 class TestExtendedJSONEncoderRegistration:
     def test_register_custom_type(self):
-        """Test registering a custom type handler."""
         ExtendedJSONEncoder.register(CustomType, lambda obj: f"custom:{obj.value}")
-
         custom_obj = CustomType("test")
-        result = json.dumps(custom_obj, cls=ExtendedJSONEncoder)
-        assert result == '"custom:test"'
+        assert_json_serializes_to(custom_obj, '"custom:test"')
 
     def test_register_non_callable_raises_error(self):
-        """Test that registering non-callable serializer raises TypeError."""
         with pytest.raises(TypeError, match="Serializer must be callable"):
             ExtendedJSONEncoder.register(CustomType, "not_callable")  # type: ignore[arg-type]
 
-    def test_register_builtin_type_raises_error(self):
-        """Test that registering built-in JSON types raises ValueError."""
-        builtin_types = [str, int, float, bool, list, dict, type(None)]
-
-        for builtin_type in builtin_types:
-            with pytest.raises(ValueError, match=f"Cannot override built-in JSON type: {builtin_type.__name__}"):
-                ExtendedJSONEncoder.register(builtin_type, lambda obj: obj)
+    @pytest.mark.parametrize("builtin_type", [str, int, float, bool, list, dict, type(None)])
+    def test_register_builtin_type_raises_error(self, builtin_type):
+        with pytest.raises(ValueError, match=f"Cannot override built-in JSON type: {builtin_type.__name__}"):
+            ExtendedJSONEncoder.register(builtin_type, lambda obj: obj)
 
     def test_register_override_existing_handler(self):
-        """Test that registering a type overrides existing handler."""
         # Register initial handler
         ExtendedJSONEncoder.register(CustomType, lambda obj: f"first:{obj.value}")
-
         custom_obj = CustomType("test")
-        result1 = json.dumps(custom_obj, cls=ExtendedJSONEncoder)
-        assert result1 == '"first:test"'
+        assert_json_serializes_to(custom_obj, '"first:test"')
 
         # Override with new handler
         ExtendedJSONEncoder.register(CustomType, lambda obj: f"second:{obj.value}")
-        result2 = json.dumps(custom_obj, cls=ExtendedJSONEncoder)
-        assert result2 == '"second:test"'
+        assert_json_serializes_to(custom_obj, '"second:test"')
 
 
 class TestJsonDumps:
     def test_basic_usage_without_type_handlers(self):
-        """Test json_dumps basic functionality without additional handlers."""
         data = {"date": date(2023, 6, 15), "uuid": UUID("12345678-1234-5678-1234-567812345678")}
-        result = json.loads(json_dumps(data))
-
         expected = {"date": "2023-06-15", "uuid": "12345678-1234-5678-1234-567812345678"}
+        result = json.loads(json_dumps(data))
         assert result == expected
 
     def test_with_additional_type_handlers(self):
-        """Test json_dumps with additional type handlers."""
         custom_obj = CustomType("test_value")
         data = {"custom": custom_obj, "date": date(2023, 6, 15)}
-
         type_handlers = {CustomType: lambda obj: f"handled:{obj.value}"}
-        result = json.loads(json_dumps(data, type_handlers=type_handlers))
-
         expected = {"custom": "handled:test_value", "date": "2023-06-15"}
+        result = json.loads(json_dumps(data, type_handlers=type_handlers))
         assert result == expected
 
     def test_type_handlers_override_default(self):
-        """Test that type_handlers take precedence over default handlers."""
         data = {"date": date(2023, 6, 15)}
-
-        # Override date handler
         type_handlers = {date: lambda obj: f"custom_date:{obj.isoformat()}"}
-        result = json.loads(json_dumps(data, type_handlers=type_handlers))
-
         expected = {"date": "custom_date:2023-06-15"}
+        result = json.loads(json_dumps(data, type_handlers=type_handlers))
         assert result == expected
 
-    def test_kwargs_passed_to_json_dumps(self):
-        """Test that additional kwargs are passed to underlying json.dumps."""
+    @pytest.mark.parametrize(
+        "kwargs,assertion",
+        [
+            ({"indent": 2}, lambda result: "\n" in result),
+            ({"ensure_ascii": True}, lambda _: "\\u" in json_dumps({"msg": "hello 世界"}, ensure_ascii=True)),
+            ({"ensure_ascii": False}, lambda _: "世界" in json_dumps({"msg": "hello 世界"}, ensure_ascii=False)),
+        ],
+    )
+    def test_kwargs_passed_to_json_dumps(self, kwargs, assertion):
         data = {"name": "test", "value": 42}
+        result = json_dumps(data, **kwargs)
+        assert assertion(result)
 
-        # Test indent parameter
-        result = json_dumps(data, indent=2)
-        assert "\n" in result  # Formatted JSON should contain newlines
-
-        # Test ensure_ascii parameter
-        data_with_unicode = {"message": "hello 世界"}
-        result_ascii = json_dumps(data_with_unicode, ensure_ascii=True)
-        result_unicode = json_dumps(data_with_unicode, ensure_ascii=False)
-
-        assert "\\u" in result_ascii  # Unicode should be escaped
-        assert "世界" in result_unicode  # Unicode should be preserved
-
-    def test_empty_type_handlers(self):
-        """Test that empty type_handlers dict works correctly."""
+    @pytest.mark.parametrize(
+        "type_handlers",
+        [
+            {},
+            None,
+        ],
+    )
+    def test_empty_and_none_type_handlers(self, type_handlers):
         data = {"date": date(2023, 6, 15)}
-        result = json_dumps(data, type_handlers={})
-        expected = json_dumps(data)
-        assert result == expected
-
-    def test_none_type_handlers(self):
-        """Test that None type_handlers works correctly."""
-        data = {"date": date(2023, 6, 15)}
-        result = json_dumps(data, type_handlers=None)
+        result = json_dumps(data, type_handlers=type_handlers)
         expected = json_dumps(data)
         assert result == expected
 
     def test_complex_nested_structure_with_custom_handlers(self):
-        """Test complex nested structure with both default and custom type handlers."""
-
-        @dataclass
-        class Address:
-            street: str
-            city: str
-
         address = Address("123 Main St", "New York")
         person = Person("Alice", 30, date(1993, 6, 15))
         custom = CustomType("special")
@@ -253,7 +199,7 @@ class TestJsonDumps:
             "address": "123 Main St, New York",
             "custom": {"type": "custom", "value": "special"},
             "id": "12345678-1234-5678-1234-567812345678",
-            "tags": ["important", "test"],  # Set order may vary
+            "tags": ["important", "test"],
         }
 
         # Check tags separately due to set ordering

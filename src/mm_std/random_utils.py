@@ -33,7 +33,7 @@ def random_decimal(from_value: Decimal, to_value: Decimal) -> Decimal:
     from_int = int(from_value * multiplier)
     to_int = int(to_value * multiplier)
 
-    random_int = random.randint(from_int, to_int)
+    random_int = random.randint(from_int, to_int)  # nosec B311
     return Decimal(random_int) / Decimal(multiplier)
 
 
@@ -68,5 +68,5 @@ def random_datetime(
     if total_seconds == 0:
         return from_time
 
-    random_seconds = random.uniform(0, total_seconds)
+    random_seconds = random.uniform(0, total_seconds)  # nosec B311
     return from_time + timedelta(seconds=random_seconds)

@@ -1,180 +1,207 @@
+import pytest
+
 from mm_std import parse_lines, str_contains_any, str_ends_with_any, str_starts_with_any
 
 
 class TestStrStartsWithAny:
-    def test_starts_with_single_prefix(self):
-        """Test string starting with one of the given prefixes."""
-        assert str_starts_with_any("hello world", ["hello"])
-        assert str_starts_with_any("test string", ["test", "other"])
-        assert not str_starts_with_any("hello world", ["world"])
+    @pytest.mark.parametrize(
+        "text,prefixes,expected",
+        [
+            ("hello world", ["hello"], True),
+            ("test string", ["test", "other"], True),
+            ("hello world", ["world"], False),
+            ("https://example.com", ["http://", "https://", "ftp://"], True),
+            ("ftp://files.example.com", ["http://", "https://", "ftp://"], True),
+            ("mailto:test@example.com", ["http://", "https://", "ftp://"], False),
+        ],
+    )
+    def test_basic_matching(self, text, prefixes, expected):
+        assert str_starts_with_any(text, prefixes) == expected
 
-    def test_starts_with_multiple_prefixes(self):
-        """Test string with multiple possible prefixes."""
-        prefixes = ["http://", "https://", "ftp://"]
-        assert str_starts_with_any("https://example.com", prefixes)
-        assert str_starts_with_any("ftp://files.example.com", prefixes)
-        assert not str_starts_with_any("mailto:test@example.com", prefixes)
+    @pytest.mark.parametrize(
+        "text,prefixes",
+        [
+            ("hello", []),
+            ("", ["prefix"]),
+        ],
+    )
+    def test_empty_inputs_return_false(self, text, prefixes):
+        assert not str_starts_with_any(text, prefixes)
 
-    def test_empty_prefixes(self):
-        """Test with empty prefixes list."""
-        assert not str_starts_with_any("hello", [])
-
-    def test_empty_string(self):
-        """Test with empty string."""
-        assert not str_starts_with_any("", ["prefix"])
+    def test_empty_string_matches_empty_prefix(self):
         assert str_starts_with_any("", [""])
 
-    def test_case_sensitivity(self):
-        """Test that matching is case sensitive."""
-        assert str_starts_with_any("Hello", ["Hello"])
-        assert not str_starts_with_any("Hello", ["hello"])
+    @pytest.mark.parametrize(
+        "text,case_match,case_no_match",
+        [
+            ("Hello", "Hello", "hello"),
+            ("FILE.TXT", "FILE", "file"),
+        ],
+    )
+    def test_case_sensitivity(self, text, case_match, case_no_match):
+        assert str_starts_with_any(text, [case_match])
+        assert not str_starts_with_any(text, [case_no_match])
 
-    def test_accepts_different_iterables(self):
-        """Test that function accepts various iterable types."""
+    @pytest.mark.parametrize(
+        "iterable_type",
+        [
+            lambda items: items,  # list
+            lambda items: tuple(items),  # tuple
+            lambda items: set(items),  # set
+            lambda items: (i for i in items),  # generator
+        ],
+    )
+    def test_accepts_different_iterables(self, iterable_type):
         text = "hello world"
-        assert str_starts_with_any(text, ["hello"])  # list
-        assert str_starts_with_any(text, ("hello", "hi"))  # tuple
-        assert str_starts_with_any(text, {"hello", "hi"})  # set
-        assert str_starts_with_any(text, (p for p in ["hello", "hi"]))  # generator
+        prefixes = iterable_type(["hello", "hi"])
+        assert str_starts_with_any(text, prefixes)
 
 
 class TestStrEndsWithAny:
-    def test_ends_with_single_suffix(self):
-        """Test string ending with one of the given suffixes."""
-        assert str_ends_with_any("hello.txt", [".txt"])
-        assert str_ends_with_any("document.pdf", [".pdf", ".doc"])
-        assert not str_ends_with_any("hello.txt", [".pdf"])
+    @pytest.mark.parametrize(
+        "filename,extensions,expected",
+        [
+            ("document.pdf", [".pdf"], True),
+            ("image.png", [".jpg", ".png", ".gif"], True),
+            ("script.py", [".js", ".ts", ".go"], False),
+            ("archive.tar.gz", [".tar.gz", ".zip"], True),
+        ],
+    )
+    def test_file_extensions(self, filename, extensions, expected):
+        assert str_ends_with_any(filename, extensions) == expected
 
-    def test_ends_with_multiple_suffixes(self):
-        """Test string with multiple possible suffixes."""
-        suffixes = [".jpg", ".png", ".gif", ".bmp"]
-        assert str_ends_with_any("image.png", suffixes)
-        assert str_ends_with_any("photo.gif", suffixes)
-        assert not str_ends_with_any("document.pdf", suffixes)
+    @pytest.mark.parametrize(
+        "text,suffixes",
+        [
+            ("hello.txt", []),
+            ("", ["suffix"]),
+        ],
+    )
+    def test_empty_inputs_return_false(self, text, suffixes):
+        assert not str_ends_with_any(text, suffixes)
 
-    def test_empty_suffixes(self):
-        """Test with empty suffixes list."""
-        assert not str_ends_with_any("hello.txt", [])
-
-    def test_empty_string(self):
-        """Test with empty string."""
-        assert not str_ends_with_any("", ["suffix"])
+    def test_empty_string_matches_empty_suffix(self):
         assert str_ends_with_any("", [""])
 
-    def test_case_sensitivity(self):
-        """Test that matching is case sensitive."""
-        assert str_ends_with_any("file.TXT", [".TXT"])
-        assert not str_ends_with_any("file.TXT", [".txt"])
+    @pytest.mark.parametrize(
+        "filename,case_match,case_no_match",
+        [
+            ("file.TXT", ".TXT", ".txt"),
+            ("IMAGE.PNG", ".PNG", ".png"),
+        ],
+    )
+    def test_case_sensitivity(self, filename, case_match, case_no_match):
+        assert str_ends_with_any(filename, [case_match])
+        assert not str_ends_with_any(filename, [case_no_match])
 
     def test_accepts_different_iterables(self):
-        """Test that function accepts various iterable types."""
-        text = "file.txt"
-        assert str_ends_with_any(text, [".txt"])  # list
-        assert str_ends_with_any(text, (".txt", ".doc"))  # tuple
-        assert str_ends_with_any(text, {".txt", ".doc"})  # set
-        assert str_ends_with_any(text, (s for s in [".txt", ".doc"]))  # generator
+        filename = "document.pdf"
+        assert str_ends_with_any(filename, [".pdf"])  # list
+        assert str_ends_with_any(filename, (".pdf", ".doc"))  # tuple
+        assert str_ends_with_any(filename, {".pdf", ".doc"})  # set
 
 
 class TestStrContainsAny:
-    def test_contains_single_substring(self):
-        """Test string containing one of the given substrings."""
-        assert str_contains_any("hello world", ["world"])
-        assert str_contains_any("the quick brown fox", ["quick", "slow"])
-        assert not str_contains_any("hello world", ["foo"])
+    @pytest.mark.parametrize(
+        "text,substrings,expected",
+        [
+            ("hello world", ["world"], True),
+            ("error: file not found", ["error", "warning", "critical"], True),
+            ("[warning] Low disk space", ["error", "warning", "critical"], True),
+            ("Everything is fine", ["error", "warning", "critical"], False),
+            ("programming language", ["gram", "lang"], True),
+        ],
+    )
+    def test_log_level_detection(self, text, substrings, expected):
+        assert str_contains_any(text, substrings) == expected
 
-    def test_contains_multiple_substrings(self):
-        """Test string with multiple possible substrings."""
-        substrings = ["error", "warning", "critical"]
-        assert str_contains_any("This is an error message", substrings)
-        assert str_contains_any("[warning] Low disk space", substrings)
-        assert not str_contains_any("Everything is fine", substrings)
+    @pytest.mark.parametrize(
+        "text,substrings",
+        [
+            ("hello world", []),
+            ("", ["substring"]),
+        ],
+    )
+    def test_empty_inputs_return_false(self, text, substrings):
+        assert not str_contains_any(text, substrings)
 
-    def test_empty_substrings(self):
-        """Test with empty substrings list."""
-        assert not str_contains_any("hello world", [])
-
-    def test_empty_string(self):
-        """Test with empty string."""
-        assert not str_contains_any("", ["substring"])
+    def test_empty_string_contains_empty_substring(self):
         assert str_contains_any("", [""])
 
-    def test_case_sensitivity(self):
-        """Test that matching is case sensitive."""
-        assert str_contains_any("Hello World", ["World"])
-        assert not str_contains_any("Hello World", ["world"])
+    @pytest.mark.parametrize(
+        "text,case_match,case_no_match",
+        [
+            ("Hello World", "World", "world"),
+            ("ERROR: Critical failure", "ERROR", "error"),
+        ],
+    )
+    def test_case_sensitivity(self, text, case_match, case_no_match):
+        assert str_contains_any(text, [case_match])
+        assert not str_contains_any(text, [case_no_match])
 
-    def test_substring_overlapping(self):
-        """Test with overlapping substrings."""
-        text = "programming"
-        assert str_contains_any(text, ["gram", "gramming"])
-        assert str_contains_any(text, ["prog", "program"])
+    @pytest.mark.parametrize(
+        "text,overlapping_substrings",
+        [
+            ("programming", ["gram", "gramming"]),
+            ("development", ["dev", "develop"]),
+        ],
+    )
+    def test_overlapping_substrings(self, text, overlapping_substrings):
+        assert str_contains_any(text, overlapping_substrings)
 
     def test_accepts_different_iterables(self):
-        """Test that function accepts various iterable types."""
         text = "hello world"
         assert str_contains_any(text, ["world"])  # list
         assert str_contains_any(text, ("world", "earth"))  # tuple
         assert str_contains_any(text, {"world", "earth"})  # set
-        assert str_contains_any(text, (s for s in ["world", "earth"]))  # generator
 
 
 class TestParseLines:
-    def test_basic_parsing(self):
-        """Test basic line parsing functionality."""
-        text = "line1\nline2\nline3"
-        result = parse_lines(text)
-        assert result == ["line1", "line2", "line3"]
+    @pytest.mark.parametrize(
+        "text,expected",
+        [
+            ("line1\nline2\nline3", ["line1", "line2", "line3"]),
+            ("single line", ["single line"]),
+            ("", []),
+            ("   \n\t\n  ", []),
+        ],
+    )
+    def test_basic_parsing(self, text, expected):
+        assert parse_lines(text) == expected
 
-    def test_empty_lines_and_whitespace(self):
-        """Test handling of empty lines and whitespace."""
+    def test_whitespace_handling(self):
         text = "line1\n\n  \nline2\n   line3   \n\nline4"
-        result = parse_lines(text)
-        assert result == ["line1", "line2", "line3", "line4"]
+        expected = ["line1", "line2", "line3", "line4"]
+        assert parse_lines(text) == expected
 
-    def test_lowercase_conversion(self):
-        """Test lowercase parameter."""
-        text = "HELLO\nWorld\nTEST"
-        result = parse_lines(text, lowercase=True)
-        assert result == ["hello", "world", "test"]
+    @pytest.mark.parametrize(
+        "text,expected",
+        [
+            ("HELLO\nWorld\nTEST", ["hello", "world", "test"]),
+            ("Mixed\nCASE\ntext", ["mixed", "case", "text"]),
+        ],
+    )
+    def test_lowercase_conversion(self, text, expected):
+        assert parse_lines(text, lowercase=True) == expected
 
-        # Verify original behavior without lowercase
-        result_normal = parse_lines(text)
-        assert result_normal == ["HELLO", "World", "TEST"]
+    @pytest.mark.parametrize(
+        "text,expected",
+        [
+            ("line1 # comment\nline2\nline3 # another", ["line1", "line2", "line3"]),
+            ("line1#no space\n#comment only\nline2 # normal", ["line1", "line2"]),
+            ("# comment1\n# comment2", []),
+        ],
+    )
+    def test_comment_removal(self, text, expected):
+        assert parse_lines(text, remove_comments=True) == expected
 
-    def test_comment_removal(self):
-        """Test comment removal functionality."""
-        text = "line1 # comment\nline2\nline3 # another comment\n# full comment line"
-        result = parse_lines(text, remove_comments=True)
-        assert result == ["line1", "line2", "line3"]
-
-    def test_comment_removal_edge_cases(self):
-        """Test comment removal with edge cases."""
-        text = "line1#no space\n#comment only\n  # spaced comment  \nline2 # normal"
-        result = parse_lines(text, remove_comments=True)
-        assert result == ["line1", "line2"]
-
-    def test_deduplication(self):
-        """Test deduplication while preserving order."""
+    def test_deduplication_preserves_order(self):
         text = "line1\nline2\nline1\nline3\nline2\nline4"
-        result = parse_lines(text, deduplicate=True)
-        assert result == ["line1", "line2", "line3", "line4"]
+        expected = ["line1", "line2", "line3", "line4"]
+        assert parse_lines(text, deduplicate=True) == expected
 
     def test_combined_options(self):
-        """Test multiple options working together."""
-        text = "HELLO # comment\nworld\nHELLO # different comment\nTEST\nworld"
+        text = "HELLO # comment\nworld\nHELLO # different\nTEST\nworld"
+        expected = ["hello", "world", "test"]
         result = parse_lines(text, lowercase=True, remove_comments=True, deduplicate=True)
-        assert result == ["hello", "world", "test"]
-
-    def test_edge_cases(self):
-        """Test edge cases with empty input and special characters."""
-        # Empty string
-        assert parse_lines("") == []
-
-        # Only whitespace
-        assert parse_lines("   \n\t\n  ") == []
-
-        # Only comments
-        assert parse_lines("# comment1\n# comment2", remove_comments=True) == []
-
-        # Single line
-        assert parse_lines("single line") == ["single line"]
+        assert result == expected

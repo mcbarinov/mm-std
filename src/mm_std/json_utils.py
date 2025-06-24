@@ -101,7 +101,7 @@ def _auto_register_optional_types() -> None:
     """Register handlers for optional dependencies if available."""
     # Pydantic models
     try:
-        from pydantic import BaseModel  # type: ignore[import-not-found]
+        from pydantic import BaseModel  # type: ignore[import-not-found]  # noqa: PLC0415
 
         ExtendedJSONEncoder.register(BaseModel, lambda obj: obj.model_dump())
     except ImportError:

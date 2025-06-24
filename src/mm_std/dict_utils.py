@@ -10,7 +10,7 @@ V = TypeVar("V")
 DictType = TypeVar("DictType", bound=MutableMapping[K, V])  # type: ignore[valid-type]
 
 
-def replace_empty_dict_entries(
+def replace_empty_dict_entries(  # noqa: UP047
     data: DictType,
     defaults: Mapping[K, V] | None = None,
     treat_zero_as_empty: bool = False,
