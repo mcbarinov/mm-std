@@ -43,11 +43,8 @@ class ExtendedJSONEncoder(json.JSONEncoder):
             serializer: Function that converts objects of this type to JSON-serializable data
 
         Raises:
-            TypeError: If serializer is not callable
             ValueError: If type_ is a built-in JSON type
         """
-        if not callable(serializer):
-            raise TypeError("Serializer must be callable")
         if type_ in (str, int, float, bool, list, dict, type(None)):
             raise ValueError(f"Cannot override built-in JSON type: {type_.__name__}")
         cls._type_handlers[type_] = serializer

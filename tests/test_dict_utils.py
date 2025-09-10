@@ -124,7 +124,7 @@ class TestReplaceEmptyDictEntries:
         assert result == {"a": [1, 2], "c": []}
 
         # Test that default_factory still works
-        result["new_key"].append("test")
+        result["new_key"].append("test")  # pyright: ignore[reportArgumentType, reportOptionalMemberAccess]
         assert result["new_key"] == ["test"]
 
     def test_ordered_dict_order_preservation(self):

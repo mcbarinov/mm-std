@@ -104,10 +104,6 @@ class TestExtendedJSONEncoderRegistration:
         custom_obj = CustomType("test")
         assert_json_serializes_to(custom_obj, '"custom:test"')
 
-    def test_register_non_callable_raises_error(self):
-        with pytest.raises(TypeError, match="Serializer must be callable"):
-            ExtendedJSONEncoder.register(CustomType, "not_callable")  # type: ignore[arg-type]
-
     @pytest.mark.parametrize("builtin_type", [str, int, float, bool, list, dict, type(None)])
     def test_register_builtin_type_raises_error(self, builtin_type):
         with pytest.raises(ValueError, match=f"Cannot override built-in JSON type: {builtin_type.__name__}"):
