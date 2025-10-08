@@ -10,12 +10,12 @@ dependencies = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest~=8.4.2",
     "pytest-xdist~=3.8.0",
-    "ruff~=0.12.12",
-    "mypy~=1.17.1",
+    "ruff~=0.14.0",
+    "mypy~=1.18.2",
     "bandit~=1.8.6",
     "pre-commit~=4.3.0",
 ]
