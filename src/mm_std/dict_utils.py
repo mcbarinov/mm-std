@@ -1,22 +1,49 @@
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from collections.abc import Mapping, MutableMapping
 from decimal import Decimal
-from typing import TypeVar, cast
+from typing import TypeVar, overload
 
 K = TypeVar("K")
 V = TypeVar("V")
-# TypeVar bound to MutableMapping with same K, V as defaults parameter
-# 'type: ignore' needed because mypy can't handle TypeVar bounds with other TypeVars
-DictType = TypeVar("DictType", bound=MutableMapping[K, V])  # type: ignore[valid-type]
 
 
-def replace_empty_dict_entries(  # noqa: UP047
-    data: DictType,
+@overload
+def replace_empty_dict_entries(
+    data: defaultdict[K, V],
     defaults: Mapping[K, V] | None = None,
     treat_zero_as_empty: bool = False,
     treat_false_as_empty: bool = False,
     treat_empty_string_as_empty: bool = True,
-) -> DictType:
+) -> defaultdict[K, V]: ...
+
+
+@overload
+def replace_empty_dict_entries(
+    data: OrderedDict[K, V],
+    defaults: Mapping[K, V] | None = None,
+    treat_zero_as_empty: bool = False,
+    treat_false_as_empty: bool = False,
+    treat_empty_string_as_empty: bool = True,
+) -> OrderedDict[K, V]: ...
+
+
+@overload
+def replace_empty_dict_entries(
+    data: dict[K, V],
+    defaults: Mapping[K, V] | None = None,
+    treat_zero_as_empty: bool = False,
+    treat_false_as_empty: bool = False,
+    treat_empty_string_as_empty: bool = True,
+) -> dict[K, V]: ...
+
+
+def replace_empty_dict_entries(
+    data: MutableMapping[K, V],
+    defaults: Mapping[K, V] | None = None,
+    treat_zero_as_empty: bool = False,
+    treat_false_as_empty: bool = False,
+    treat_empty_string_as_empty: bool = True,
+) -> MutableMapping[K, V]:
     """
     Replace empty entries in a dictionary with defaults or remove them entirely.
 
@@ -60,4 +87,4 @@ def replace_empty_dict_entries(  # noqa: UP047
             new_value = value
 
         result[key] = new_value
-    return cast(DictType, result)
+    return result
