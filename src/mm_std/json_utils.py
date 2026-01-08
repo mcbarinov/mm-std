@@ -49,17 +49,17 @@ class ExtendedJSONEncoder(json.JSONEncoder):
             raise ValueError(f"Cannot override built-in JSON type: {type_.__name__}")
         cls._type_handlers[type_] = serializer
 
-    def default(self, obj: Any) -> Any:  # noqa: ANN401
+    def default(self, o: Any) -> Any:  # noqa: ANN401
         # Check registered type handlers first
         for type_, handler in self._type_handlers.items():
-            if isinstance(obj, type_):
-                return handler(obj)
+            if isinstance(o, type_):
+                return handler(o)
 
         # Special case: dataclasses (requires is_dataclass check, not isinstance)
-        if is_dataclass(obj) and not isinstance(obj, type):
-            return asdict(obj)  # Don't need recursive serialization
+        if is_dataclass(o) and not isinstance(o, type):
+            return asdict(o)  # Don't need recursive serialization
 
-        return super().default(obj)
+        return super().default(o)
 
 
 def json_dumps(data: Any, type_handlers: dict[type[Any], Callable[[Any], Any]] | None = None, **kwargs: Any) -> str:  # noqa: ANN401
