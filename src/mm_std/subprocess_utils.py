@@ -6,14 +6,8 @@ TIMEOUT_EXIT_CODE = 255
 
 
 @dataclass
-class ShellResult:
-    """Result of shell command execution.
-
-    Args:
-        stdout: Standard output from the command
-        stderr: Standard error from the command
-        code: Exit code of the command
-    """
+class CmdResult:
+    """Result of command execution."""
 
     stdout: str
     stderr: str
@@ -32,30 +26,57 @@ class ShellResult:
         return result
 
 
-def shell(cmd: str, timeout: int | None = 60, capture_output: bool = True, echo_command: bool = False) -> ShellResult:
-    """Execute a shell command.
+def run_cmd(
+    cmd: str,
+    timeout: int | None = 60,
+    capture_output: bool = True,
+    echo_command: bool = False,
+    shell: bool = False,
+) -> CmdResult:
+    """Execute a command.
 
     Args:
         cmd: Command to execute
         timeout: Timeout in seconds, None for no timeout
         capture_output: Whether to capture stdout/stderr
         echo_command: Whether to print the command before execution
+        shell: If False (default), the command is parsed with shlex.split() and
+            executed without shell interpretation. Special characters like
+            backticks, $(), pipes (|), redirects (>, <), and wildcards (*) are
+            treated as literal text. This is the safe mode for commands with
+            user input.
+            If True, the command is passed to the shell as-is, enabling pipes,
+            redirects, command substitution, and other shell features. Use this
+            only for trusted commands that need shell functionality.
 
     Returns:
-        ShellResult with stdout, stderr and exit code
+        CmdResult with stdout, stderr and exit code
     """
     if echo_command:
         print(cmd)  # noqa: T201
     try:
-        process = subprocess.run(cmd, timeout=timeout, capture_output=capture_output, shell=True, check=False)  # noqa: S602 # nosec
+        if shell:
+            process = subprocess.run(  # noqa: S602 # nosec
+                cmd, timeout=timeout, capture_output=capture_output, shell=True, check=False
+            )
+        else:
+            process = subprocess.run(  # noqa: S603 # nosec
+                shlex.split(cmd), timeout=timeout, capture_output=capture_output, shell=False, check=False
+            )
         stdout = process.stdout.decode("utf-8", errors="replace") if capture_output else ""
         stderr = process.stderr.decode("utf-8", errors="replace") if capture_output else ""
-        return ShellResult(stdout=stdout, stderr=stderr, code=process.returncode)
+        return CmdResult(stdout=stdout, stderr=stderr, code=process.returncode)
     except subprocess.TimeoutExpired:
-        return ShellResult(stdout="", stderr="timeout", code=TIMEOUT_EXIT_CODE)
+        return CmdResult(stdout="", stderr="timeout", code=TIMEOUT_EXIT_CODE)
 
 
-def ssh_shell(host: str, cmd: str, ssh_key_path: str | None = None, timeout: int = 60, echo_command: bool = False) -> ShellResult:
+def run_ssh_cmd(
+    host: str,
+    cmd: str,
+    ssh_key_path: str | None = None,
+    timeout: int = 60,
+    echo_command: bool = False,
+) -> CmdResult:
     """Execute a command on remote host via SSH.
 
     Args:
@@ -66,10 +87,10 @@ def ssh_shell(host: str, cmd: str, ssh_key_path: str | None = None, timeout: int
         echo_command: Whether to print the command before execution
 
     Returns:
-        ShellResult with stdout, stderr and exit code
+        CmdResult with stdout, stderr and exit code
     """
     ssh_cmd = "ssh -o 'StrictHostKeyChecking=no' -o 'LogLevel=ERROR'"
     if ssh_key_path:
         ssh_cmd += f" -i {shlex.quote(ssh_key_path)}"
     ssh_cmd += f" {shlex.quote(host)} {shlex.quote(cmd)}"
-    return shell(ssh_cmd, timeout=timeout, echo_command=echo_command)
+    return run_cmd(ssh_cmd, timeout=timeout, echo_command=echo_command)
