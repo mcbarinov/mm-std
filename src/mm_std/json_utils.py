@@ -1,4 +1,4 @@
-from __future__ import annotations
+"""Extended JSON encoder with support for Python types."""
 
 import json
 from collections.abc import Callable
@@ -35,21 +35,23 @@ class ExtendedJSONEncoder(json.JSONEncoder):
     }
 
     @classmethod
-    def register(cls, type_: type[Any], serializer: Callable[[Any], Any]) -> None:
+    def register(cls, type_: type[Any], handler: Callable[[Any], Any]) -> None:
         """Register a custom type with its serialization function.
 
         Args:
             type_: The type to register
-            serializer: Function that converts objects of this type to JSON-serializable data
+            handler: Function that converts objects of this type to JSON-serializable data
 
         Raises:
             ValueError: If type_ is a built-in JSON type
+
         """
         if type_ in (str, int, float, bool, list, dict, type(None)):
             raise ValueError(f"Cannot override built-in JSON type: {type_.__name__}")
-        cls._type_handlers[type_] = serializer
+        cls._type_handlers[type_] = handler
 
-    def default(self, o: Any) -> Any:  # noqa: ANN401
+    def default(self, o: Any) -> Any:  # noqa: ANN401 - Any required for generic JSON encoding
+        """Encode object to JSON-serializable format."""
         # Check registered type handlers first
         for type_, handler in self._type_handlers.items():
             if isinstance(o, type_):
@@ -62,20 +64,21 @@ class ExtendedJSONEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-def json_dumps(data: Any, type_handlers: dict[type[Any], Callable[[Any], Any]] | None = None, **kwargs: Any) -> str:  # noqa: ANN401
+def json_dumps(obj: Any, type_handlers: dict[type[Any], Callable[[Any], Any]] | None = None, **kwargs: Any) -> str:  # noqa: ANN401 - Any required for generic type handler
     """Serialize object to JSON with extended type support.
 
     Unlike standard json.dumps, uses ExtendedJSONEncoder which automatically handles
     UUID, Decimal, Path, datetime, dataclasses, enums, pydantic models, and other Python types.
 
     Args:
-        data: Object to serialize to JSON
+        obj: Object to serialize to JSON
         type_handlers: Optional additional type handlers for this call only.
                       These handlers take precedence over default ones.
         **kwargs: Additional arguments passed to json.dumps
 
     Returns:
         JSON string representation
+
     """
     if type_handlers:
         # Type narrowing for mypy
@@ -83,7 +86,7 @@ def json_dumps(data: Any, type_handlers: dict[type[Any], Callable[[Any], Any]] |
 
         class TemporaryEncoder(ExtendedJSONEncoder):
             _type_handlers: ClassVar[dict[type[Any], Callable[[Any], Any]]] = {
-                **ExtendedJSONEncoder._type_handlers,  # noqa: SLF001
+                **ExtendedJSONEncoder._type_handlers,  # noqa: SLF001 - accessing class internals for type handler inheritance
                 **handlers,
             }
 
@@ -91,14 +94,14 @@ def json_dumps(data: Any, type_handlers: dict[type[Any], Callable[[Any], Any]] |
     else:
         encoder_cls = ExtendedJSONEncoder
 
-    return json.dumps(data, cls=encoder_cls, **kwargs)
+    return json.dumps(obj, cls=encoder_cls, **kwargs)
 
 
 def _auto_register_optional_types() -> None:
     """Register handlers for optional dependencies if available."""
     # Pydantic models
     try:
-        from pydantic import BaseModel  # type: ignore[import-not-found]  # noqa: PLC0415
+        from pydantic import BaseModel  # noqa: PLC0415 - optional pydantic import at runtime
 
         ExtendedJSONEncoder.register(BaseModel, lambda obj: obj.model_dump())
     except ImportError:

@@ -1,3 +1,5 @@
+"""Type-safe random generation for decimals and datetimes."""
+
 import random
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -18,6 +20,7 @@ def random_decimal(from_value: Decimal, to_value: Decimal) -> Decimal:
 
     Raises:
         ValueError: If from_value > to_value
+
     """
     if from_value > to_value:
         raise ValueError("from_value must be <= to_value")
@@ -37,14 +40,33 @@ def random_decimal(from_value: Decimal, to_value: Decimal) -> Decimal:
     return Decimal(random_int) / Decimal(multiplier)
 
 
-def random_datetime(
-    from_time: datetime,
-    *,
-    hours: int = 0,
-    minutes: int = 0,
-    seconds: int = 0,
-) -> datetime:
-    """Generate a random datetime within a specified time range.
+def random_datetime(from_time: datetime, to_time: datetime) -> datetime:
+    """Generate a random datetime between from_time and to_time.
+
+    Args:
+        from_time: Minimum datetime (inclusive)
+        to_time: Maximum datetime (inclusive)
+
+    Returns:
+        Random datetime in the specified range
+
+    Raises:
+        ValueError: If from_time > to_time
+
+    """
+    if from_time > to_time:
+        raise ValueError("from_time must be <= to_time")
+
+    delta = (to_time - from_time).total_seconds()
+    if delta == 0:
+        return from_time
+
+    random_seconds = random.uniform(0, delta)  # nosec B311
+    return from_time + timedelta(seconds=random_seconds)
+
+
+def random_datetime_offset(from_time: datetime, *, hours: int = 0, minutes: int = 0, seconds: int = 0) -> datetime:
+    """Generate a random datetime within a specified offset from base time.
 
     Returns a random datetime between from_time and from_time + offset,
     where offset is calculated from the provided hours, minutes, and seconds.
@@ -60,13 +82,10 @@ def random_datetime(
 
     Raises:
         ValueError: If any offset value is negative
+
     """
     if hours < 0 or minutes < 0 or seconds < 0:
-        raise ValueError("Range values must be non-negative")
+        raise ValueError("Offset values must be non-negative")
 
     total_seconds = hours * 3600 + minutes * 60 + seconds
-    if total_seconds == 0:
-        return from_time
-
-    random_seconds = random.uniform(0, total_seconds)  # nosec B311
-    return from_time + timedelta(seconds=random_seconds)
+    return random_datetime(from_time, from_time + timedelta(seconds=total_seconds))

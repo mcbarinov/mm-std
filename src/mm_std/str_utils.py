@@ -1,3 +1,5 @@
+"""String matching utilities and multiline text parsing."""
+
 from collections.abc import Iterable
 
 
@@ -16,12 +18,7 @@ def str_contains_any(value: str, substrings: Iterable[str]) -> bool:
     return any(substring in value for substring in substrings)
 
 
-def parse_lines(
-    text: str,
-    lowercase: bool = False,
-    remove_comments: bool = False,
-    deduplicate: bool = False,
-) -> list[str]:
+def parse_lines(text: str, lowercase: bool = False, remove_comments: bool = False, deduplicate: bool = False) -> list[str]:
     """Parse multiline text into a list of cleaned lines.
 
     Args:
@@ -32,6 +29,7 @@ def parse_lines(
 
     Returns:
         List of non-empty, stripped lines after applying specified transformations
+
     """
     if lowercase:
         text = text.lower()

@@ -10,7 +10,6 @@ A collection of Python utilities for common data manipulation tasks with strict 
 - **Random Utilities**: Type-safe random generation for decimals and datetimes
 - **String Utilities**: Efficient string matching utilities for prefixes, suffixes, and substrings, plus multiline text parsing
 - **Subprocess Utilities**: Safe shell command execution with comprehensive result handling
-- **Full Type Safety**: Strict mypy compliance with comprehensive type annotations
 
 ## Quick Start
 
@@ -78,34 +77,34 @@ parsed = parse_lines(
 Execute shell commands safely with comprehensive result handling:
 
 ```python
-from mm_std import shell, ssh_shell, ShellResult
+from mm_std import run_cmd, run_ssh_cmd, CmdResult
 
 # Execute local commands
-result = shell("ls -la /tmp")
+result = run_cmd("ls -la /tmp")
 print(f"Exit code: {result.code}")
 print(f"Output: {result.stdout}")
 print(f"Errors: {result.stderr}")
 print(f"Combined: {result.combined_output}")
 
 # Handle command errors gracefully
-result = shell("grep 'pattern' nonexistent.txt")
+result = run_cmd("grep 'pattern' nonexistent.txt")
 if result.code != 0:
     print(f"Command failed: {result.stderr}")
 
 # Execute with timeout
-result = shell("long-running-command", timeout=30)
+result = run_cmd("long-running-command", timeout=30)
 if result.code == 255:  # TIMEOUT_EXIT_CODE
     print("Command timed out")
 
 # Echo commands for debugging
-result = shell("echo 'Hello World'", echo_command=True)
+result = run_cmd("echo 'Hello World'", echo_command=True)
 
-# Complex shell operations with pipes
-result = shell("ps aux | grep python | wc -l")
+# Complex shell operations with pipes (requires shell=True)
+result = run_cmd("ps aux | grep python | wc -l", shell=True)
 python_processes = int(result.stdout.strip())
 
 # Execute commands on remote hosts via SSH
-ssh_result = ssh_shell(
+ssh_result = run_ssh_cmd(
     host="server.example.com",
     cmd="systemctl status nginx",
     ssh_key_path="~/.ssh/id_rsa",
@@ -113,7 +112,7 @@ ssh_result = ssh_shell(
 )
 
 # SSH commands are automatically quoted for security
-ssh_result = ssh_shell(
+ssh_result = run_ssh_cmd(
     "server.example.com",
     "echo 'hello world; ls -la'",  # Properly escaped
     echo_command=True
@@ -151,7 +150,7 @@ json_str = json_dumps(data, type_handlers={
 Clean up dictionaries by replacing or removing empty values:
 
 ```python
-from mm_std import replace_empty_dict_entries
+from mm_std import compact_dict
 
 data = {
     "name": "John",
@@ -162,16 +161,16 @@ data = {
 }
 
 # Remove empty entries entirely
-cleaned = replace_empty_dict_entries(data)
+cleaned = compact_dict(data)
 # Result: {"name": "John"}
 
 # Replace with defaults
 defaults = {"age": 25, "email": "unknown@example.com"}
-cleaned = replace_empty_dict_entries(data, defaults=defaults)
+cleaned = compact_dict(data, defaults=defaults)
 # Result: {"name": "John", "age": 25, "email": "unknown@example.com"}
 
 # Treat zero and false as empty too
-cleaned = replace_empty_dict_entries(
+cleaned = compact_dict(
     data,
     defaults=defaults,
     treat_zero_as_empty=True,
@@ -184,14 +183,14 @@ cleaned = replace_empty_dict_entries(
 UTC-focused datetime operations:
 
 ```python
-from mm_std import utc_now, utc_delta, parse_date
+from mm_std import utc_now, utc_now_offset, parse_datetime
 
 # Current UTC time
 now = utc_now()
 
 # Time calculations
-past = utc_delta(hours=-2, minutes=-30)
-future = utc_delta(days=7)
+past = utc_now_offset(hours=-2, minutes=-30)
+future = utc_now_offset(days=7)
 
 # Flexible date parsing
 dates = [
@@ -201,10 +200,10 @@ dates = [
     "2023/12/25"
 ]
 
-parsed_dates = [parse_date(d) for d in dates]
+parsed_dates = [parse_datetime(d) for d in dates]
 
 # Parse and ignore timezone info
-local_time = parse_date("2023-12-25T10:30:00+02:00", ignore_tz=True)
+local_time = parse_datetime("2023-12-25T10:30:00+02:00", ignore_tz=True)
 ```
 
 ### Random Utilities
@@ -212,16 +211,21 @@ local_time = parse_date("2023-12-25T10:30:00+02:00", ignore_tz=True)
 Generate random values with precision:
 
 ```python
-from mm_std import random_decimal, random_datetime
+from mm_std import random_decimal, random_datetime, random_datetime_offset
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Random decimal with preserved precision
 price = random_decimal(Decimal("10.00"), Decimal("99.99"))
 
-# Random datetime within a range
+# Random datetime within a range (from_time to to_time)
+start = datetime.now()
+end = start + timedelta(days=7)
+random_time = random_datetime(start, end)
+
+# Random datetime with offset from base time
 base_time = datetime.now()
-random_time = random_datetime(
+random_time = random_datetime_offset(
     base_time,
     hours=24,      # Up to 24 hours later
     minutes=30,    # Plus up to 30 minutes

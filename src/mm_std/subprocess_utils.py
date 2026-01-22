@@ -1,8 +1,11 @@
+"""Safe shell command execution with result handling."""
+
 import shlex
 import subprocess  # nosec
 from dataclasses import dataclass
 
 TIMEOUT_EXIT_CODE = 255
+"""Exit code returned when command execution times out."""
 
 
 @dataclass
@@ -25,13 +28,19 @@ class CmdResult:
             result += self.stderr
         return result
 
+    @property
+    def is_success(self) -> bool:
+        """True if command completed successfully (exit code 0)."""
+        return self.code == 0
+
+    @property
+    def is_timeout(self) -> bool:
+        """True if command timed out."""
+        return self.code == TIMEOUT_EXIT_CODE
+
 
 def run_cmd(
-    cmd: str,
-    timeout: int | None = 60,
-    capture_output: bool = True,
-    echo_command: bool = False,
-    shell: bool = False,
+    cmd: str, timeout: int | None = 60, capture_output: bool = True, echo_command: bool = False, shell: bool = False
 ) -> CmdResult:
     """Execute a command.
 
@@ -51,16 +60,17 @@ def run_cmd(
 
     Returns:
         CmdResult with stdout, stderr and exit code
+
     """
     if echo_command:
-        print(cmd)  # noqa: T201
+        print(cmd)  # noqa: T201 - print is intentional for echo_command feature
     try:
         if shell:
-            process = subprocess.run(  # noqa: S602 # nosec
+            process = subprocess.run(  # noqa: S602 # nosec - shell=True required for pipe support
                 cmd, timeout=timeout, capture_output=capture_output, shell=True, check=False
             )
         else:
-            process = subprocess.run(  # noqa: S603 # nosec
+            process = subprocess.run(  # noqa: S603 # nosec - subprocess with shell=False is safe
                 shlex.split(cmd), timeout=timeout, capture_output=capture_output, shell=False, check=False
             )
         stdout = process.stdout.decode("utf-8", errors="replace") if capture_output else ""
@@ -76,6 +86,7 @@ def run_ssh_cmd(
     ssh_key_path: str | None = None,
     timeout: int = 60,
     echo_command: bool = False,
+    strict_host_key_checking: bool | None = None,
 ) -> CmdResult:
     """Execute a command on remote host via SSH.
 
@@ -85,11 +96,17 @@ def run_ssh_cmd(
         ssh_key_path: Path to SSH private key file
         timeout: Timeout in seconds
         echo_command: Whether to print the command before execution
+        strict_host_key_checking: If True/False, explicitly set StrictHostKeyChecking.
+            If None, leave SSH defaults unchanged.
 
     Returns:
         CmdResult with stdout, stderr and exit code
+
     """
-    ssh_cmd = "ssh -o 'StrictHostKeyChecking=no' -o 'LogLevel=ERROR'"
+    ssh_cmd = "ssh -o 'LogLevel=ERROR'"
+    if strict_host_key_checking is not None:
+        option_value = "yes" if strict_host_key_checking else "no"
+        ssh_cmd += f" -o 'StrictHostKeyChecking={option_value}'"
     if ssh_key_path:
         ssh_cmd += f" -i {shlex.quote(ssh_key_path)}"
     ssh_cmd += f" {shlex.quote(host)} {shlex.quote(cmd)}"
